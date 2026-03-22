@@ -14,6 +14,7 @@ data class WifiSecuritySnapshot(
     val gatewayAddress: String?,
     val localAddress: String?,
     val dnsSummary: String,
+    val dnsAdvice: String,
     val permissionLimited: Boolean,
     val nearbyDeviceCount: Int,
     val nearbyDeviceConfidenceLabel: String,

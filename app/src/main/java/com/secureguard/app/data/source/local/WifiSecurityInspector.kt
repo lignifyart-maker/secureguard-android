@@ -44,6 +44,7 @@ class WifiSecurityInspector @Inject constructor(
                 gatewayAddress = null,
                 localAddress = null,
                 dnsSummary = "No Wi-Fi DNS in use",
+                dnsAdvice = "DNS checks matter more when you are actually on Wi-Fi.",
                 permissionLimited = false,
                 nearbyDeviceCount = 0,
                 nearbyDeviceConfidenceLabel = "No estimate needed",
@@ -73,6 +74,12 @@ class WifiSecurityInspector @Inject constructor(
             ?.joinToString(limit = 2) { it.hostAddress ?: "unknown" }
             ?.ifBlank { "DNS not available" }
             ?: "DNS not available"
+        val dnsAdvice = when {
+            dnsSummary == "DNS not available" -> "Android did not expose DNS details here, so treat unfamiliar Wi-Fi with normal caution."
+            dnsSummary.contains("8.8.8.8") || dnsSummary.contains("1.1.1.1") -> "This network is using a well-known public DNS provider, which is common and not a red flag by itself."
+            gatewayAddress != null && dnsSummary.contains(gatewayAddress) -> "This Wi-Fi appears to rely on the router for DNS, which is common on home and office networks."
+            else -> "This DNS setup is not automatically dangerous, but it is a good extra detail to notice on unfamiliar networks."
+        }
         val localNetworkSnapshot = localNetworkInspector.estimateVisibleDevices(
             gatewayAddress = gatewayAddress,
             localAddress = localAddress
@@ -152,6 +159,7 @@ class WifiSecurityInspector @Inject constructor(
             gatewayAddress = gatewayAddress,
             localAddress = localAddress,
             dnsSummary = dnsSummary,
+            dnsAdvice = dnsAdvice,
             permissionLimited = !hasLocationPermission,
             nearbyDeviceCount = localNetworkSnapshot.visibleDeviceCount,
             nearbyDeviceConfidenceLabel = localNetworkSnapshot.confidenceLabel,

@@ -43,6 +43,7 @@ data class PermissionAuditUiState(
         gatewayAddress = null,
         localAddress = null,
         dnsSummary = "Checking DNS...",
+        dnsAdvice = "A short DNS explanation will appear here after the network check.",
         permissionLimited = false,
         nearbyDeviceCount = 0,
         nearbyDeviceConfidenceLabel = "Preparing estimate...",
