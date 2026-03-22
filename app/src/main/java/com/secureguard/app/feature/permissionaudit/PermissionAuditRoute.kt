@@ -1571,7 +1571,7 @@ private fun TextButtonLike(
         enabled = enabled,
         shape = RoundedCornerShape(999.dp),
         color = if (enabled) {
-            Color(0xFFFFE3D4)
+            Color(0xFFFFE8DC)
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         },
@@ -1579,7 +1579,7 @@ private fun TextButtonLike(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
             color = if (enabled) {
                 Color(0xFF9C5B3D)
             } else {
@@ -1594,12 +1594,12 @@ private fun TextButtonLike(
 private fun EventChip(text: String) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        color = Color(0xFFFFF0C9)
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+            color = Color(0xFF8E6700),
             style = MaterialTheme.typography.labelMedium
         )
     }
@@ -1688,13 +1688,13 @@ private fun AppRiskCard(app: AppScanResult) {
 private fun PermissionPill(label: String) {
     Surface(
         shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+        color = Color(0xFFFFF2EA)
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = Color(0xFF8A5A46)
         )
     }
 }
@@ -1707,7 +1707,7 @@ private fun RiskBadge(level: RiskLevel) {
     ) {
         Text(
             text = level.label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
             color = Color.White,
             style = MaterialTheme.typography.labelLarge
         )
@@ -1725,7 +1725,7 @@ private fun RiskBadgeText(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
             color = Color.White,
             style = MaterialTheme.typography.labelLarge
         )
@@ -1741,40 +1741,40 @@ private fun heroHeadline(notableApps: Int): String = when {
 
 @Composable
 private fun riskContainerColor(level: RiskLevel): Color = when (level) {
-    RiskLevel.Critical -> Color(0xFFFFE3E1)
-    RiskLevel.High -> Color(0xFFFFF0D9)
-    RiskLevel.Medium -> Color(0xFFFFF8D7)
+    RiskLevel.Critical -> Color(0xFFFFECE8)
+    RiskLevel.High -> Color(0xFFFFF2DF)
+    RiskLevel.Medium -> Color(0xFFFFF8E4)
     RiskLevel.Safe -> MaterialTheme.colorScheme.surface
 }
 
 @Composable
 private fun riskBadgeColor(level: RiskLevel): Color = when (level) {
-    RiskLevel.Critical -> Color(0xFFC85C5C)
-    RiskLevel.High -> Color(0xFFDD8B42)
-    RiskLevel.Medium -> Color(0xFFC6A64D)
-    RiskLevel.Safe -> Color(0xFF5D9971)
+    RiskLevel.Critical -> Color(0xFFE17A78)
+    RiskLevel.High -> Color(0xFFE5A15F)
+    RiskLevel.Medium -> Color(0xFFD7B15B)
+    RiskLevel.Safe -> Color(0xFF77B487)
 }
 
 @Composable
 private fun wifiContainerColor(level: WifiSafetyLevel): Color = when (level) {
-    WifiSafetyLevel.Safe -> Color(0xFFDFF5EC)
-    WifiSafetyLevel.Caution -> Color(0xFFFFF3D8)
-    WifiSafetyLevel.Risky -> Color(0xFFFFE4DF)
+    WifiSafetyLevel.Safe -> Color(0xFFE7F7EE)
+    WifiSafetyLevel.Caution -> Color(0xFFFFF3DE)
+    WifiSafetyLevel.Risky -> Color(0xFFFFECE6)
     WifiSafetyLevel.Unknown -> MaterialTheme.colorScheme.surface
 }
 
 private fun wifiAccentColor(level: WifiSafetyLevel): Color = when (level) {
-    WifiSafetyLevel.Safe -> Color(0xFF4A8C69)
-    WifiSafetyLevel.Caution -> Color(0xFFB27A1F)
-    WifiSafetyLevel.Risky -> Color(0xFFC55A54)
-    WifiSafetyLevel.Unknown -> Color(0xFF6F7C92)
+    WifiSafetyLevel.Safe -> Color(0xFF64A27A)
+    WifiSafetyLevel.Caution -> Color(0xFFC08A35)
+    WifiSafetyLevel.Risky -> Color(0xFFD7746C)
+    WifiSafetyLevel.Unknown -> Color(0xFF8B8393)
 }
 
 private fun protectionAccentColor(state: VpnProtectionState): Color = when (state) {
-    VpnProtectionState.Off -> Color(0xFF6F7C92)
-    VpnProtectionState.Starting -> Color(0xFFB27A1F)
-    VpnProtectionState.On -> Color(0xFF4A8C69)
-    VpnProtectionState.Error -> Color(0xFFC55A54)
+    VpnProtectionState.Off -> Color(0xFF8B8393)
+    VpnProtectionState.Starting -> Color(0xFFC08A35)
+    VpnProtectionState.On -> Color(0xFF64A27A)
+    VpnProtectionState.Error -> Color(0xFFD7746C)
 }
 
 private fun protectionHelperText(state: VpnProtectionState): String = when (state) {

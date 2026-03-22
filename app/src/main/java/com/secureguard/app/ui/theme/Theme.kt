@@ -11,17 +11,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 private val LightColors = lightColorScheme(
-    primary = GuardBlue,
+    primary = Color(0xFFE98F6F),
     secondary = GuardMint,
     tertiary = GuardButter,
     background = GuardCream,
     surface = Color.White,
     primaryContainer = GuardLavender,
-    secondaryContainer = Color(0xFFDFF7F0),
-    tertiaryContainer = Color(0xFFFFF4D1),
+    secondaryContainer = GuardPistachio,
+    tertiaryContainer = GuardSand,
     onBackground = GuardInk,
     onSurface = GuardInk,
-    onSurfaceVariant = Color(0xFF5F6877)
+    onPrimary = Color.White,
+    onPrimaryContainer = GuardInk,
+    onSecondaryContainer = GuardInk,
+    onTertiaryContainer = GuardInk,
+    surfaceVariant = GuardRose,
+    onSurfaceVariant = Color(0xFF6E6575)
 )
 
 private val DarkColors = darkColorScheme(
