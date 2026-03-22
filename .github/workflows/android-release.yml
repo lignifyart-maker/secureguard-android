@@ -33,11 +33,13 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Make Gradle executable
-        run: chmod +x ./gradlew
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.14
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: Resolve release metadata
         id: release_meta
