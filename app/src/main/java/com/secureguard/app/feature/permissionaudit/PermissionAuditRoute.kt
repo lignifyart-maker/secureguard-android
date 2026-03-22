@@ -10,6 +10,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.secureguard.app.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -359,6 +360,7 @@ private fun AuditContent(
     onDisableProtection: () -> Unit
 ) {
     var selectedSection by rememberSaveable { mutableStateOf(HomeSection.Noteworthy) }
+    var isNoteworthyExpanded by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val noteworthyApps = state.apps.filter { it.riskLevel != RiskLevel.Safe }
@@ -371,7 +373,7 @@ private fun AuditContent(
     val usageAccessEnabled = state.apps.any { it.lastUsedAt != null }
 
     val currentItems = when (selectedSection) {
-        HomeSection.Noteworthy -> noteworthyApps
+        HomeSection.Noteworthy -> if (isNoteworthyExpanded) noteworthyApps else noteworthyApps.take(NOTEWORTHY_PREVIEW_COUNT)
         HomeSection.Oversized -> oversizedApps
         HomeSection.Unused -> staleApps
     }
@@ -393,6 +395,7 @@ private fun AuditContent(
                 staleCount = staleApps.size,
                 isCheckingForUpdate = state.isCheckingForUpdate,
                 updateStatusMessage = state.updateStatusMessage,
+                versionLabel = BuildConfig.VERSION_NAME,
                 lastScanLabel = state.lastScanLabel,
                 onCheckForUpdate = onCheckForUpdate,
                 onDismissUpdateStatus = onDismissUpdateStatus,
@@ -413,8 +416,11 @@ private fun AuditContent(
         item {
             SectionSummaryCard(
                 section = selectedSection,
-                itemCount = currentItems.size,
+                itemCount = if (selectedSection == HomeSection.Noteworthy) noteworthyApps.size else currentItems.size,
                 usageAccessEnabled = usageAccessEnabled,
+                canExpand = selectedSection == HomeSection.Noteworthy && noteworthyApps.size > NOTEWORTHY_PREVIEW_COUNT,
+                isExpanded = isNoteworthyExpanded,
+                onToggleExpanded = { isNoteworthyExpanded = !isNoteworthyExpanded },
                 onOpenUsageAccess = { openUsageAccessSettings(context) }
             )
         }
@@ -448,6 +454,7 @@ private fun HomeSummaryCard(
     staleCount: Int,
     isCheckingForUpdate: Boolean,
     updateStatusMessage: String?,
+    versionLabel: String,
     lastScanLabel: String,
     onCheckForUpdate: () -> Unit,
     onDismissUpdateStatus: () -> Unit,
@@ -501,6 +508,11 @@ private fun HomeSummaryCard(
             }
             Text(
                 text = "上次整理：$lastScanLabel",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+            )
+            Text(
+                text = "版本 $versionLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
             )
@@ -620,6 +632,9 @@ private fun SectionSummaryCard(
     section: HomeSection,
     itemCount: Int,
     usageAccessEnabled: Boolean,
+    canExpand: Boolean,
+    isExpanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onOpenUsageAccess: () -> Unit
 ) {
     Card(
@@ -644,6 +659,12 @@ private fun SectionSummaryCard(
                 TextButtonLike(
                     text = "打開使用紀錄權限",
                     onClick = onOpenUsageAccess
+                )
+            }
+            if (canExpand) {
+                TextButtonLike(
+                    text = if (isExpanded) "先看前 10 個" else "顯示更多",
+                    onClick = onToggleExpanded
                 )
             }
         }
@@ -2179,7 +2200,6 @@ private fun openAppInfo(context: Context, packageName: String) {
 private fun uninstallIntent(packageName: String): Intent {
     return Intent(Intent.ACTION_DELETE).apply {
         data = Uri.parse("package:$packageName")
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 }
 
@@ -2278,6 +2298,7 @@ private enum class HomeSection(val title: String) {
     Unused("很多天沒用的")
 }
 
+private const val NOTEWORTHY_PREVIEW_COUNT = 10
 private const val OVERSIZED_APP_BYTES = 150L * 1024L * 1024L
 private const val STALE_APP_MS = 30L * 24L * 60L * 60L * 1000L
 
