@@ -21,7 +21,13 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_STARTED" -> "Protection mode started"
                         "VPN_STOPPED" -> "Protection mode stopped"
                         "VPN_ERROR" -> "Protection mode needs attention"
-                        else -> "$appName checked $target"
+                        else -> {
+                            when (mostRecent.riskLabel) {
+                                "Tracker" -> "$appName may be contacting a tracker"
+                                "Sensitive" -> "$appName checked a sensitive domain"
+                                else -> "$appName checked $target"
+                            }
+                        }
                     }
                     val detail = when (mostRecent.eventType) {
                         "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
