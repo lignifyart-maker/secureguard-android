@@ -43,6 +43,7 @@ class WifiSecurityInspector @Inject constructor(
                 detail = "Public Wi-Fi risks are lower right now because your phone is not using a Wi-Fi network.",
                 gatewayAddress = null,
                 localAddress = null,
+                dnsSummary = "No Wi-Fi DNS in use",
                 permissionLimited = false,
                 nearbyDeviceCount = 0,
                 nearbyDeviceConfidenceLabel = "No estimate needed",
@@ -67,6 +68,11 @@ class WifiSecurityInspector @Inject constructor(
         val securityLabel = resolveSecurityLabel(wifiInfo)
         val gatewayAddress = wifiManager.dhcpInfo?.gateway?.takeIf { it != 0 }?.let(::intToIp)
         val localAddress = wifiManager.dhcpInfo?.ipAddress?.takeIf { it != 0 }?.let(::intToIp)
+        val dnsSummary = connectivityManager.getLinkProperties(activeNetwork)
+            ?.dnsServers
+            ?.joinToString(limit = 2) { it.hostAddress ?: "unknown" }
+            ?.ifBlank { "DNS not available" }
+            ?: "DNS not available"
         val localNetworkSnapshot = localNetworkInspector.estimateVisibleDevices(
             gatewayAddress = gatewayAddress,
             localAddress = localAddress
@@ -145,6 +151,7 @@ class WifiSecurityInspector @Inject constructor(
             detail = detail,
             gatewayAddress = gatewayAddress,
             localAddress = localAddress,
+            dnsSummary = dnsSummary,
             permissionLimited = !hasLocationPermission,
             nearbyDeviceCount = localNetworkSnapshot.visibleDeviceCount,
             nearbyDeviceConfidenceLabel = localNetworkSnapshot.confidenceLabel,

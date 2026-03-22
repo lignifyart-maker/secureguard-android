@@ -989,6 +989,11 @@ private fun WifiSafetyCard(
                 )
             }
             Text(
+                text = "DNS: ${snapshot.dnsSummary}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
                 text = "Visible devices: ${snapshot.nearbyDeviceCount}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium

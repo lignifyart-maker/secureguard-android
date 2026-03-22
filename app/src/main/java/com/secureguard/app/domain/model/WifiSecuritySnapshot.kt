@@ -13,6 +13,7 @@ data class WifiSecuritySnapshot(
     val detail: String,
     val gatewayAddress: String?,
     val localAddress: String?,
+    val dnsSummary: String,
     val permissionLimited: Boolean,
     val nearbyDeviceCount: Int,
     val nearbyDeviceConfidenceLabel: String,

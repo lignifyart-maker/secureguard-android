@@ -42,6 +42,7 @@ data class PermissionAuditUiState(
         detail = "This overview will show whether your current Wi-Fi looks open or protected.",
         gatewayAddress = null,
         localAddress = null,
+        dnsSummary = "Checking DNS...",
         permissionLimited = false,
         nearbyDeviceCount = 0,
         nearbyDeviceConfidenceLabel = "Preparing estimate...",
