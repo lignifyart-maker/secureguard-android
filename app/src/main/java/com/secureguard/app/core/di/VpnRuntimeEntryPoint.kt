@@ -1,6 +1,7 @@
 package com.secureguard.app.core.di
 
 import com.secureguard.app.core.database.dao.NetworkEventDao
+import com.secureguard.app.vpn.attribution.ConnectionOwnerResolver
 import com.secureguard.app.vpn.parser.DnsPacketParser
 import com.secureguard.app.vpn.parser.DomainRiskClassifier
 import com.secureguard.app.vpn.parser.Ipv4PacketParser
@@ -13,6 +14,7 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface VpnRuntimeEntryPoint {
     fun networkEventDao(): NetworkEventDao
+    fun connectionOwnerResolver(): ConnectionOwnerResolver
     fun ipv4PacketParser(): Ipv4PacketParser
     fun udpDatagramParser(): UdpDatagramParser
     fun dnsPacketParser(): DnsPacketParser
