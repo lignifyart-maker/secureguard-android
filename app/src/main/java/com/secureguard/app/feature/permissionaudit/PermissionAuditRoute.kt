@@ -5,6 +5,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -50,6 +53,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +82,7 @@ fun PermissionAuditRoute(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var selectedApp by remember { mutableStateOf<AppScanResult?>(null) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) {
@@ -87,8 +95,14 @@ fun PermissionAuditRoute(
             ContextCompat.startForegroundService(context, LocalVpnService.startIntent(context))
         }
     }
+    val uninstallLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.refresh()
+    }
     PermissionAuditScreen(
         state = uiState,
+        onOpenAppActions = { selectedApp = it },
         onRefresh = viewModel::refresh,
         onClearRecentActivity = viewModel::clearRecentActivity,
         onToggleRecentActivityExpanded = viewModel::toggleRecentActivityExpanded,
@@ -118,6 +132,20 @@ fun PermissionAuditRoute(
         onShowDisclosure = viewModel::requestProtectionDisclosure,
         onDismissDisclosure = viewModel::dismissProtectionDisclosure
     )
+    selectedApp?.let { app ->
+        AppActionDialog(
+            app = app,
+            onDismiss = { selectedApp = null },
+            onOpenAppInfo = {
+                selectedApp = null
+                openAppInfo(context, app.packageName)
+            },
+            onUninstall = {
+                selectedApp = null
+                uninstallLauncher.launch(uninstallIntent(app.packageName))
+            }
+        )
+    }
 }
 
 @Composable
@@ -163,6 +191,7 @@ private fun VpnDisclosureDialog(
 @Composable
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
+    onOpenAppActions: (AppScanResult) -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
@@ -216,6 +245,7 @@ private fun PermissionAuditScreen(
                 state = state,
                 innerPadding = innerPadding,
                 onRefresh = onRefresh,
+                onOpenAppActions = onOpenAppActions,
                 onClearRecentActivity = onClearRecentActivity,
                 onToggleRecentActivityExpanded = onToggleRecentActivityExpanded,
                 onOpenRecentActivityHistory = onOpenRecentActivityHistory,
@@ -298,6 +328,7 @@ private fun ErrorState(
 private fun AuditContent(
     state: PermissionAuditUiState,
     innerPadding: PaddingValues,
+    onOpenAppActions: (AppScanResult) -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
@@ -309,23 +340,26 @@ private fun AuditContent(
     onEnableProtection: () -> Unit,
     onDisableProtection: () -> Unit
 ) {
-    val criticalApps = state.apps.count { it.riskLevel == RiskLevel.Critical }
-    val highApps = state.apps.count { it.riskLevel == RiskLevel.High }
-    val notableApps = state.apps.count { it.riskLevel != RiskLevel.Safe }
+    var selectedSection by rememberSaveable { mutableStateOf(HomeSection.Noteworthy) }
+    val context = LocalContext.current
+    val listState = rememberLazyListState()
+    val noteworthyApps = state.apps.filter { it.riskLevel != RiskLevel.Safe }
+    val oversizedApps = state.apps
+        .filter { it.apkSizeBytes >= OVERSIZED_APP_BYTES }
+        .sortedByDescending { it.apkSizeBytes }
+    val staleApps = state.apps
+        .filter { it.lastUsedAt != null && System.currentTimeMillis() - it.lastUsedAt >= STALE_APP_MS }
+        .sortedBy { it.lastUsedAt ?: Long.MAX_VALUE }
+    val usageAccessEnabled = state.apps.any { it.lastUsedAt != null }
 
-    if (state.isRecentActivityHistoryOpen) {
-        RecentActivityHistoryScreen(
-            timeline = state.recentConnectionTimeline,
-            vpnState = state.vpnProtectionState,
-            isClearing = state.isClearingRecentActivity,
-            statusMessage = state.recentActivityStatusMessage,
-            innerPadding = innerPadding,
-            onClear = onClearRecentActivity
-        )
-        return
+    val currentItems = when (selectedSection) {
+        HomeSection.Noteworthy -> noteworthyApps
+        HomeSection.Oversized -> oversizedApps
+        HomeSection.Unused -> staleApps
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding),
@@ -333,112 +367,380 @@ private fun AuditContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            HeroCard(
+            HomeSummaryCard(
                 overview = state.securityOverview,
-                totalApps = state.apps.size,
-                notableApps = notableApps,
+                appCount = state.apps.size,
+                noteworthyCount = noteworthyApps.size,
+                oversizedCount = oversizedApps.size,
+                staleCount = staleApps.size,
                 lastScanLabel = state.lastScanLabel,
                 onRefresh = onRefresh
             )
         }
 
         item {
-            PrimaryActionCard(overview = state.securityOverview)
-        }
-
-        item {
-            QuickStartCard(state = state.vpnProtectionState)
-        }
-
-        item {
-            ProtectionModeCard(
-                state = state.vpnProtectionState,
-                statusMessage = state.vpnStatusMessage,
-                capabilityNote = state.vpnCapabilityNote,
-                onEnableProtection = onShowDisclosure,
-                onDisableProtection = onDisableProtection
+            HomeSectionPicker(
+                selectedSection = selectedSection,
+                noteworthyCount = noteworthyApps.size,
+                oversizedCount = oversizedApps.size,
+                staleCount = staleApps.size,
+                onSelect = { selectedSection = it }
             )
         }
 
         item {
-            ConnectionFeedCard(preview = state.connectionFeedPreview)
-        }
-
-        item {
-            RecentActivityCard(
-                timeline = state.recentConnectionTimeline,
-                vpnState = state.vpnProtectionState,
-                isClearing = state.isClearingRecentActivity,
-                isExpanded = state.isRecentActivityExpanded,
-                statusMessage = state.recentActivityStatusMessage,
-                onClear = onClearRecentActivity,
-                onOpenHistory = onOpenRecentActivityHistory,
-                onToggleExpanded = onToggleRecentActivityExpanded
+            SectionSummaryCard(
+                section = selectedSection,
+                itemCount = currentItems.size,
+                usageAccessEnabled = usageAccessEnabled,
+                onOpenUsageAccess = { openUsageAccessSettings(context) }
             )
         }
 
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                MiniStatusCard(
-                    title = "要先看",
-                    value = criticalApps.toString(),
-                    tone = StatusTone.Warm
-                )
-                MiniStatusCard(
-                    title = "再看一下",
-                    value = highApps.toString(),
-                    tone = StatusTone.Sun
-                )
-                MiniStatusCard(
-                    title = "看過了",
-                    value = state.apps.size.toString(),
-                    tone = StatusTone.Calm
-                )
-            }
-        }
-
-        item {
-            GentleChecklist(apps = state.apps)
-        }
-
-        item {
-            SecuritySuggestionCard(overview = state.securityOverview)
-        }
-
-        if (state.securityOverview.watchApps.isNotEmpty()) {
+        if (currentItems.isEmpty()) {
             item {
-                WatchAppsCard(apps = state.securityOverview.watchApps)
+                EmptySectionCard(
+                    section = selectedSection,
+                    usageAccessEnabled = usageAccessEnabled,
+                    onOpenUsageAccess = { openUsageAccessSettings(context) }
+                )
+            }
+        } else {
+            items(currentItems, key = { it.packageName }) { app ->
+                ActionAppCard(
+                    app = app,
+                    section = selectedSection,
+                    onOpenAppActions = onOpenAppActions
+                )
             }
         }
+    }
+}
 
-        if (state.securityOverview.closeCandidates.isNotEmpty()) {
-            item {
-                CloseCandidatesCard(apps = state.securityOverview.closeCandidates)
-            }
-        }
-
-        item {
-            WifiSafetyCard(
-                snapshot = state.wifiSnapshot,
-                trustedNetworks = state.trustedWifiNetworks,
-                onRequestWifiPermission = onRequestWifiPermission,
-                onTrustNetwork = onTrustNetwork,
-                onRemoveTrustedNetwork = onRemoveTrustedNetwork
-            )
-        }
-
-        item {
+@Composable
+private fun HomeSummaryCard(
+    overview: SecurityOverview,
+    appCount: Int,
+    noteworthyCount: Int,
+    oversizedCount: Int,
+    staleCount: Int,
+    lastScanLabel: String,
+    onRefresh: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Text(
-                text = "可以先看的 app",
+                text = "手機整理重點",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "${overview.score} 分",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = overview.headline,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = overview.summary,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.88f)
+            )
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("共看了 $appCount 個 app", style = MaterialTheme.typography.labelLarge)
+                    Text("值得注意的有 $noteworthyCount 個", style = MaterialTheme.typography.bodyMedium)
+                    Text("過於龐大的有 $oversizedCount 個", style = MaterialTheme.typography.bodyMedium)
+                    Text("很多天沒用的有 $staleCount 個", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Text(
+                text = "上次整理：$lastScanLabel",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+            )
+            Button(
+                onClick = onRefresh,
+                shape = RoundedCornerShape(22.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFFD37D),
+                    contentColor = Color(0xFF5E4300)
+                )
+            ) {
+                Text("重新整理")
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSectionPicker(
+    selectedSection: HomeSection,
+    noteworthyCount: Int,
+    oversizedCount: Int,
+    staleCount: Int,
+    onSelect: (HomeSection) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        HomeSectionButton(
+            title = "值得注意的",
+            subtitle = "$noteworthyCount 個",
+            selected = selectedSection == HomeSection.Noteworthy,
+            onClick = { onSelect(HomeSection.Noteworthy) },
+            modifier = Modifier.weight(1f)
+        )
+        HomeSectionButton(
+            title = "過於龐大的",
+            subtitle = "$oversizedCount 個",
+            selected = selectedSection == HomeSection.Oversized,
+            onClick = { onSelect(HomeSection.Oversized) },
+            modifier = Modifier.weight(1f)
+        )
+        HomeSectionButton(
+            title = "很多天沒用的",
+            subtitle = "$staleCount 個",
+            selected = selectedSection == HomeSection.Unused,
+            onClick = { onSelect(HomeSection.Unused) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun HomeSectionButton(
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        color = if (selected) Color(0xFFFFD9C8) else MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) Color(0xFF8A4B2A) else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionSummaryCard(
+    section: HomeSection,
+    itemCount: Int,
+    usageAccessEnabled: Boolean,
+    onOpenUsageAccess: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = section.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-        }
-
-        items(state.apps.take(8), key = { it.packageName }) { app ->
-            AppRiskCard(app = app)
+            Text(
+                text = sectionSummary(section, itemCount, usageAccessEnabled),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (section == HomeSection.Unused && !usageAccessEnabled) {
+                TextButtonLike(
+                    text = "打開使用紀錄權限",
+                    onClick = onOpenUsageAccess
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun EmptySectionCard(
+    section: HomeSection,
+    usageAccessEnabled: Boolean,
+    onOpenUsageAccess: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = emptySectionTitle(section, usageAccessEnabled),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = emptySectionDetail(section, usageAccessEnabled),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (section == HomeSection.Unused && !usageAccessEnabled) {
+                Button(
+                    onClick = onOpenUsageAccess,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFA981),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("去打開權限")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionAppCard(
+    app: AppScanResult,
+    section: HomeSection,
+    onOpenAppActions: (AppScanResult) -> Unit
+) {
+    Card(
+        onClick = { onOpenAppActions(app) },
+        colors = CardDefaults.cardColors(containerColor = actionCardColor(section)),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = app.appName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = sectionPrimaryLine(section, app),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = sectionSecondaryLine(section, app),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RiskBadge(level = app.riskLevel)
+                if (section == HomeSection.Oversized) {
+                    PermissionPill(label = readableSize(app.apkSizeBytes))
+                }
+                if (section == HomeSection.Unused && app.lastUsedAt != null) {
+                    PermissionPill(label = "${daysSince(app.lastUsedAt)} 天沒開")
+                }
+            }
+            Text(
+                text = "點一下就能移除，或先看 app 資訊。",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppActionDialog(
+    app: AppScanResult,
+    onDismiss: () -> Unit,
+    onOpenAppInfo: () -> Unit,
+    onUninstall: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("${app.appName} 接下來怎麼做")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("如果你不認得它，或很少用它，可以先去看系統資訊，必要時直接移除。")
+                Text(
+                    text = app.riskReasons.joinToString(separator = " / "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onUninstall,
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE98F6F))
+            ) {
+                Text("移除這個 app")
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onOpenAppInfo,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFE6EF),
+                        contentColor = Color(0xFF9A4B6A)
+                    )
+                ) {
+                    Text("看 app 資訊")
+                }
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF2D9C7),
+                        contentColor = Color(0xFF7A4E35)
+                    )
+                ) {
+                    Text("先等等")
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -1226,7 +1528,10 @@ private fun SecuritySuggestionCard(overview: SecurityOverview) {
 }
 
 @Composable
-private fun WatchAppsCard(apps: List<AppScanResult>) {
+private fun WatchAppsCard(
+    apps: List<AppScanResult>,
+    onOpenAppActions: (AppScanResult) -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(28.dp)
@@ -1247,6 +1552,7 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
             )
             apps.forEach { app ->
                 Surface(
+                    onClick = { onOpenAppActions(app) },
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                 ) {
@@ -1271,6 +1577,11 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Text(
+                            text = "點一下就能看下一步",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -1279,7 +1590,10 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
 }
 
 @Composable
-private fun CloseCandidatesCard(apps: List<AppScanResult>) {
+private fun CloseCandidatesCard(
+    apps: List<AppScanResult>,
+    onOpenAppActions: (AppScanResult) -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(28.dp)
@@ -1300,6 +1614,7 @@ private fun CloseCandidatesCard(apps: List<AppScanResult>) {
             )
             apps.forEach { app ->
                 Surface(
+                    onClick = { onOpenAppActions(app) },
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
                 ) {
@@ -1323,6 +1638,11 @@ private fun CloseCandidatesCard(apps: List<AppScanResult>) {
                             text = app.riskReasons.joinToString(separator = " / "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "點一下就能去處理",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -1648,8 +1968,12 @@ private fun ChecklistItem(
 }
 
 @Composable
-private fun AppRiskCard(app: AppScanResult) {
+private fun AppRiskCard(
+    app: AppScanResult,
+    onOpenAppActions: (AppScanResult) -> Unit
+) {
     Card(
+        onClick = { onOpenAppActions(app) },
         colors = CardDefaults.cardColors(
             containerColor = riskContainerColor(app.riskLevel)
         ),
@@ -1682,6 +2006,11 @@ private fun AppRiskCard(app: AppScanResult) {
                     PermissionPill(label = permission.substringAfterLast('.'))
                 }
             }
+            Text(
+                text = "點一下就能看下一步",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -1740,6 +2069,112 @@ private fun heroHeadline(notableApps: Int): String = when {
     notableApps <= 5 -> "現在很適合做點小整理"
     else -> "今天需要多留意一點"
 }
+
+private fun openAppInfo(context: Context, packageName: String) {
+    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        data = Uri.parse("package:$packageName")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+private fun uninstallIntent(packageName: String): Intent {
+    return Intent(Intent.ACTION_DELETE).apply {
+        data = Uri.parse("package:$packageName")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+}
+
+private fun openUsageAccessSettings(context: Context) {
+    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+private fun sectionSummary(
+    section: HomeSection,
+    itemCount: Int,
+    usageAccessEnabled: Boolean
+): String = when (section) {
+    HomeSection.Noteworthy -> "這裡放的是權限和安全上比較值得先看的 app。現在有 $itemCount 個。"
+    HomeSection.Oversized -> "這裡放的是安裝包偏大的 app。現在有 $itemCount 個。"
+    HomeSection.Unused -> if (usageAccessEnabled) {
+        "這裡放的是超過 30 天沒開的 app。現在有 $itemCount 個。"
+    } else {
+        "這一區要先打開使用紀錄權限，才能知道哪些 app 很久沒用了。"
+    }
+}
+
+private fun emptySectionTitle(section: HomeSection, usageAccessEnabled: Boolean): String = when (section) {
+    HomeSection.Noteworthy -> "目前沒有特別突出的 app"
+    HomeSection.Oversized -> "目前沒有特別大的 app"
+    HomeSection.Unused -> if (usageAccessEnabled) {
+        "目前沒有很久沒開的 app"
+    } else {
+        "還看不到很多天沒用的 app"
+    }
+}
+
+private fun emptySectionDetail(section: HomeSection, usageAccessEnabled: Boolean): String = when (section) {
+    HomeSection.Noteworthy -> "這次掃描裡，沒有被挑進優先整理名單。"
+    HomeSection.Oversized -> "這次沒有 app 大到被列進提醒。"
+    HomeSection.Unused -> if (usageAccessEnabled) {
+        "最近 30 天內，你常用的 app 看起來都還有在開。"
+    } else {
+        "打開使用紀錄權限後，這裡才知道哪些 app 很久沒碰了。"
+    }
+}
+
+private fun actionCardColor(section: HomeSection): Color = when (section) {
+    HomeSection.Noteworthy -> Color(0xFFFFF2EA)
+    HomeSection.Oversized -> Color(0xFFFFF5DE)
+    HomeSection.Unused -> Color(0xFFF7F1FF)
+}
+
+private fun sectionPrimaryLine(section: HomeSection, app: AppScanResult): String = when (section) {
+    HomeSection.Noteworthy -> app.riskReasons.firstOrNull() ?: "它值得你先看一眼。"
+    HomeSection.Oversized -> "這個 app 大約有 ${readableSize(app.apkSizeBytes)}。"
+    HomeSection.Unused -> "上次打開大約是 ${formatLastUsed(app.lastUsedAt)}。"
+}
+
+private fun sectionSecondaryLine(section: HomeSection, app: AppScanResult): String = when (section) {
+    HomeSection.Noteworthy -> "如果你不常用它，可以直接點進去處理。"
+    HomeSection.Oversized -> "如果你很少用，刪掉後通常最有感。"
+    HomeSection.Unused -> "如果你已經忘了它是做什麼的，可以考慮移除。"
+}
+
+private fun readableSize(bytes: Long): String {
+    if (bytes <= 0L) return "大小不明"
+    val mb = bytes / (1024f * 1024f)
+    return if (mb >= 1024f) {
+        String.format("%.1f GB", mb / 1024f)
+    } else {
+        String.format("%.0f MB", mb)
+    }
+}
+
+private fun formatLastUsed(lastUsedAt: Long?): String {
+    if (lastUsedAt == null) return "看不到"
+    val days = daysSince(lastUsedAt)
+    return when {
+        days <= 0 -> "今天"
+        days == 1L -> "1 天前"
+        else -> "$days 天前"
+    }
+}
+
+private fun daysSince(lastUsedAt: Long): Long =
+    ((System.currentTimeMillis() - lastUsedAt) / (1000L * 60 * 60 * 24)).coerceAtLeast(0)
+
+private enum class HomeSection(val title: String) {
+    Noteworthy("值得注意的"),
+    Oversized("過於龐大的"),
+    Unused("很多天沒用的")
+}
+
+private const val OVERSIZED_APP_BYTES = 150L * 1024L * 1024L
+private const val STALE_APP_MS = 30L * 24L * 60L * 60L * 1000L
 
 @Composable
 private fun riskContainerColor(level: RiskLevel): Color = when (level) {

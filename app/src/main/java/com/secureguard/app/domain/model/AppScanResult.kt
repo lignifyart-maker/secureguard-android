@@ -5,6 +5,8 @@ data class AppScanResult(
     val appName: String,
     val versionName: String,
     val versionCode: Long,
+    val apkSizeBytes: Long,
+    val lastUsedAt: Long?,
     val requestedPermissions: List<String>,
     val riskyPermissions: List<String>,
     val riskLevel: RiskLevel,
