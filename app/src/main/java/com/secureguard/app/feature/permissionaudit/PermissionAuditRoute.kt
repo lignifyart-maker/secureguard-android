@@ -544,6 +544,10 @@ private fun RecentActivityCard(
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        RiskBadgeText(
+                            text = item.attributionStateLabel,
+                            color = attributionAccent(item.attributionStateLabel)
+                        )
                         Text(
                             text = item.sourceLabel,
                             style = MaterialTheme.typography.labelMedium,
@@ -1483,6 +1487,14 @@ private fun suggestionPriorityColor(label: String): Color = when (label) {
     "Do now" -> Color(0xFFC55A54)
     "Soon" -> Color(0xFFDD8B42)
     "Good to know" -> Color(0xFF4A8C69)
+    else -> Color(0xFF6F7C92)
+}
+
+private fun attributionAccent(label: String): Color = when (label) {
+    "Mapped" -> Color(0xFF4A8C69)
+    "Pending" -> Color(0xFFB27A1F)
+    "Partial" -> Color(0xFFDD8B42)
+    "Fallback" -> Color(0xFFC55A54)
     else -> Color(0xFF6F7C92)
 }
 

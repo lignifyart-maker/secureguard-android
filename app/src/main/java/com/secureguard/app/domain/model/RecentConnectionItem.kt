@@ -5,6 +5,7 @@ data class RecentConnectionItem(
     val sourceLabel: String,
     val riskLabel: String,
     val eventLabel: String,
+    val attributionStateLabel: String,
     val attributionLabel: String,
     val relativeTime: String
 )
