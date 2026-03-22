@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.secureguard.app.core.datastore.SettingsDataStore
 import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
+import com.secureguard.app.domain.usecase.ClearNetworkEventsUseCase
 import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
 import com.secureguard.app.domain.usecase.ObserveConnectionFeedPreviewUseCase
 import com.secureguard.app.domain.usecase.ObserveRecentConnectionTimelineUseCase
@@ -27,6 +28,7 @@ class PermissionAuditViewModel @Inject constructor(
     private val scanInstalledAppsUseCase: ScanInstalledAppsUseCase,
     private val getWifiSecuritySnapshotUseCase: GetWifiSecuritySnapshotUseCase,
     private val buildSecurityOverviewUseCase: BuildSecurityOverviewUseCase,
+    private val clearNetworkEventsUseCase: ClearNetworkEventsUseCase,
     private val observeConnectionFeedPreviewUseCase: ObserveConnectionFeedPreviewUseCase,
     private val observeRecentConnectionTimelineUseCase: ObserveRecentConnectionTimelineUseCase,
     private val settingsDataStore: SettingsDataStore
@@ -100,6 +102,12 @@ class PermissionAuditViewModel @Inject constructor(
 
     fun dismissProtectionDisclosure() {
         _uiState.update { it.copy(showVpnDisclosure = false) }
+    }
+
+    fun clearRecentActivity() {
+        viewModelScope.launch {
+            clearNetworkEventsUseCase()
+        }
     }
 
     private fun observeLastScan() {

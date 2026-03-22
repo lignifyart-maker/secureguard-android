@@ -14,4 +14,8 @@ class NetworkEventRepositoryImpl @Inject constructor(
     override fun observeRecentEvents(limit: Int): Flow<List<NetworkEventEntity>> {
         return networkEventDao.observeRecent(limit)
     }
+
+    override suspend fun clearAll() {
+        networkEventDao.clearAll()
+    }
 }

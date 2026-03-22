@@ -89,6 +89,7 @@ fun PermissionAuditRoute(
     PermissionAuditScreen(
         state = uiState,
         onRefresh = viewModel::refresh,
+        onClearRecentActivity = viewModel::clearRecentActivity,
         onRequestWifiPermission = {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         },
@@ -153,6 +154,7 @@ private fun VpnDisclosureDialog(
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
     onRefresh: () -> Unit,
+    onClearRecentActivity: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -314,7 +316,10 @@ private fun AuditContent(
         }
 
         item {
-            RecentActivityCard(timeline = state.recentConnectionTimeline)
+            RecentActivityCard(
+                timeline = state.recentConnectionTimeline,
+                onClear = onClearRecentActivity
+            )
         }
 
         item {
@@ -465,7 +470,10 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
 }
 
 @Composable
-private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
+private fun RecentActivityCard(
+    timeline: RecentConnectionTimeline,
+    onClear: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(28.dp)
@@ -479,6 +487,12 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            if (timeline.items.isNotEmpty()) {
+                TextButtonLike(
+                    text = "Clear",
+                    onClick = onClear
+                )
+            }
             Text(
                 text = timeline.summary,
                 style = MaterialTheme.typography.bodySmall,
