@@ -13,16 +13,36 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
     operator fun invoke(limit: Int = 5): Flow<RecentConnectionTimeline> {
         return networkEventRepository.observeRecentEvents(limit).map { events ->
             RecentConnectionTimeline(
+                summary = summaryFor(events.size),
                 items = events.map { event ->
                     RecentConnectionItem(
                         title = event.host ?: event.ipAddress ?: "Unknown target",
                         sourceLabel = event.appName ?: "Unknown app",
                         riskLabel = event.riskLabel,
+                        eventLabel = eventLabelFor(event.eventType),
                         relativeTime = relativeTimeFrom(event.createdAt)
                     )
                 }
             )
         }
+    }
+
+    private fun summaryFor(count: Int): String = when {
+        count == 0 -> "No recent events yet."
+        count == 1 -> "One recent event is ready to review."
+        count <= 4 -> "A small set of recent events is ready to review."
+        else -> "This recent activity list is starting to get busy."
+    }
+
+    private fun eventLabelFor(eventType: String): String = when (eventType) {
+        "VPN_STARTED" -> "VPN started"
+        "VPN_STOPPED" -> "VPN stopped"
+        "VPN_ERROR" -> "VPN issue"
+        "DNS_A_QUERY" -> "IPv4 lookup"
+        "DNS_AAAA_QUERY" -> "IPv6 lookup"
+        "DNS_CNAME_QUERY" -> "Alias lookup"
+        "DNS_MX_QUERY" -> "Mail lookup"
+        else -> "DNS lookup"
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {

@@ -5,4 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface NetworkEventRepository {
     fun observeRecentEvents(limit: Int = 20): Flow<List<NetworkEventEntity>>
+
+    suspend fun clearAll()
 }

@@ -89,6 +89,7 @@ fun PermissionAuditRoute(
     PermissionAuditScreen(
         state = uiState,
         onRefresh = viewModel::refresh,
+        onClearRecentActivity = viewModel::clearRecentActivity,
         onRequestWifiPermission = {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         },
@@ -153,6 +154,7 @@ private fun VpnDisclosureDialog(
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
     onRefresh: () -> Unit,
+    onClearRecentActivity: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -191,6 +193,7 @@ private fun PermissionAuditScreen(
                 state = state,
                 innerPadding = innerPadding,
                 onRefresh = onRefresh,
+                onClearRecentActivity = onClearRecentActivity,
                 onRequestWifiPermission = onRequestWifiPermission,
                 onTrustNetwork = onTrustNetwork,
                 onRemoveTrustedNetwork = onRemoveTrustedNetwork,
@@ -267,6 +270,7 @@ private fun AuditContent(
     state: PermissionAuditUiState,
     innerPadding: PaddingValues,
     onRefresh: () -> Unit,
+    onClearRecentActivity: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -314,7 +318,10 @@ private fun AuditContent(
         }
 
         item {
-            RecentActivityCard(timeline = state.recentConnectionTimeline)
+            RecentActivityCard(
+                timeline = state.recentConnectionTimeline,
+                onClear = onClearRecentActivity
+            )
         }
 
         item {
@@ -465,7 +472,10 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
 }
 
 @Composable
-private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
+private fun RecentActivityCard(
+    timeline: RecentConnectionTimeline,
+    onClear: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(28.dp)
@@ -474,41 +484,77 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
             modifier = Modifier.padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent activity",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (timeline.items.isNotEmpty()) {
+                    TextButtonLike(
+                        text = "Clear",
+                        onClick = onClear
+                    )
+                }
+            }
             Text(
-                text = "Recent activity",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                text = timeline.summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (timeline.items.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                ) {
+                    Text(
+                        text = "Turn on protection mode to start filling in this recent activity list.",
+                        modifier = Modifier.padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
             timeline.items.take(3).forEach { item ->
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
                 ) {
-                    Text(
-                        text = item.title,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = item.riskLabel,
-                        modifier = Modifier.padding(start = 14.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = connectionFeedAccent(item.riskLabel)
-                    )
-                    Text(
-                        text = item.sourceLabel,
-                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = item.relativeTime,
-                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = item.riskLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = connectionFeedAccent(item.riskLabel)
+                        )
+                        Text(
+                            text = item.eventLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = item.sourceLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = item.relativeTime,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
