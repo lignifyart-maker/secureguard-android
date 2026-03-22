@@ -816,6 +816,11 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            Text(
+                text = "These apps are not necessarily malicious, but they are the strongest candidates for a closer look first.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             apps.forEach { app ->
                 Surface(
                     shape = RoundedCornerShape(20.dp),
