@@ -550,6 +550,11 @@ private fun RecentActivityCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
+                            text = item.attributionLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
                             text = item.relativeTime,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
