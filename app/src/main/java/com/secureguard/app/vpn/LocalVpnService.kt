@@ -10,13 +10,22 @@ import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import dagger.hilt.android.EntryPointAccessors
 import com.secureguard.app.MainActivity
+import com.secureguard.app.core.database.entity.NetworkEventEntity
+import com.secureguard.app.core.di.NetworkEventEntryPoint
 import com.secureguard.app.domain.model.VpnProtectionState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class LocalVpnService : VpnService() {
     private var tunnelInterface: ParcelFileDescriptor? = null
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -29,6 +38,7 @@ class LocalVpnService : VpnService() {
     override fun onDestroy() {
         tunnelInterface?.close()
         tunnelInterface = null
+        serviceScope.cancel()
         super.onDestroy()
         if (_serviceState.value != VpnProtectionState.Off) {
             _serviceState.value = VpnProtectionState.Off
@@ -59,17 +69,32 @@ class LocalVpnService : VpnService() {
                 tunnelInterface = parcelFileDescriptor
                 _serviceState.value = VpnProtectionState.On
                 _statusMessage.value = "Protection mode is on. Traffic monitoring features can build on this tunnel."
+                logNetworkEvent(
+                    eventType = "VPN_STARTED",
+                    riskLabel = "Info",
+                    host = "local_protection"
+                )
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 manager.notify(NOTIFICATION_ID, buildNotification("Protection mode is on."))
             } else {
                 _serviceState.value = VpnProtectionState.Error
                 _statusMessage.value = "SecureGuard could not establish the local VPN tunnel."
+                logNetworkEvent(
+                    eventType = "VPN_ERROR",
+                    riskLabel = "Caution",
+                    host = "local_protection"
+                )
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
         }.onFailure {
             _serviceState.value = VpnProtectionState.Error
             _statusMessage.value = "SecureGuard hit a problem while starting protection mode."
+            logNetworkEvent(
+                eventType = "VPN_ERROR",
+                riskLabel = "Caution",
+                host = "local_protection"
+            )
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
@@ -78,10 +103,40 @@ class LocalVpnService : VpnService() {
     private fun stopProtection() {
         tunnelInterface?.close()
         tunnelInterface = null
+        logNetworkEvent(
+            eventType = "VPN_STOPPED",
+            riskLabel = "Info",
+            host = "local_protection"
+        )
         _serviceState.value = VpnProtectionState.Off
         _statusMessage.value = "Protection mode is off."
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun logNetworkEvent(
+        eventType: String,
+        riskLabel: String,
+        host: String
+    ) {
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            NetworkEventEntryPoint::class.java
+        )
+        serviceScope.launch {
+            entryPoint.networkEventDao().insert(
+                NetworkEventEntity(
+                    packageName = null,
+                    appName = "SecureGuard",
+                    host = host,
+                    ipAddress = null,
+                    protocol = "VPN",
+                    eventType = eventType,
+                    riskLabel = riskLabel,
+                    createdAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 
     private fun buildNotification(contentText: String): Notification {
