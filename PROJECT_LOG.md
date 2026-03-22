@@ -26,6 +26,12 @@
 - Wired the clear action from the dashboard into the screen content path.
 - Kept the branch buildable after the clear-action integration fix.
 
+## Merge Prep Round
+
+- Aligned the recent-activity header so the clear action sits correctly in the panel header.
+- Polished the empty state into a softer card-style hint instead of plain text.
+- Kept the feature branch buildable and ready to merge back to `main`.
+
 ## Current State
 
 - `assembleDebug` passes.
