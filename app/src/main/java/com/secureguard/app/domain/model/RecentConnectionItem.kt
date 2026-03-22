@@ -1,5 +1,6 @@
 package com.secureguard.app.domain.model
 
 data class RecentConnectionItem(
-    val title: String
+    val title: String,
+    val sourceLabel: String
 )

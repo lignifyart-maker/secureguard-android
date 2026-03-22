@@ -491,6 +491,12 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
                             .padding(14.dp),
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Text(
+                        text = item.sourceLabel,
+                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

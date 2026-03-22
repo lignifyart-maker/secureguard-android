@@ -15,7 +15,8 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
             RecentConnectionTimeline(
                 items = events.map { event ->
                     RecentConnectionItem(
-                        title = event.host ?: event.ipAddress ?: "Unknown target"
+                        title = event.host ?: event.ipAddress ?: "Unknown target",
+                        sourceLabel = event.appName ?: "Unknown app"
                     )
                 }
             )
