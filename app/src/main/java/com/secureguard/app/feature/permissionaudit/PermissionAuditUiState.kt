@@ -33,6 +33,7 @@ data class PermissionAuditUiState(
         recentCount = 0
     ),
     val recentConnectionTimeline: RecentConnectionTimeline = RecentConnectionTimeline(
+        summary = "No recent events yet.",
         items = emptyList()
     ),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(

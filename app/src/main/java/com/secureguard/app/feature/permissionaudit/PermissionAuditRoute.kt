@@ -479,6 +479,11 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            Text(
+                text = timeline.summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (timeline.items.isEmpty()) {
                 Text(
                     text = "Turn on protection mode to start filling in this recent activity list.",

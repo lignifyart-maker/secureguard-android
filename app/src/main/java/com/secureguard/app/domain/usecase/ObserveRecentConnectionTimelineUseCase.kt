@@ -13,6 +13,7 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
     operator fun invoke(limit: Int = 5): Flow<RecentConnectionTimeline> {
         return networkEventRepository.observeRecentEvents(limit).map { events ->
             RecentConnectionTimeline(
+                summary = summaryFor(events.size),
                 items = events.map { event ->
                     RecentConnectionItem(
                         title = event.host ?: event.ipAddress ?: "Unknown target",
@@ -24,6 +25,13 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
                 }
             )
         }
+    }
+
+    private fun summaryFor(count: Int): String = when {
+        count == 0 -> "No recent events yet."
+        count == 1 -> "One recent event is ready to review."
+        count <= 4 -> "A small set of recent events is ready to review."
+        else -> "This recent activity list is starting to get busy."
     }
 
     private fun eventLabelFor(eventType: String): String = when (eventType) {
