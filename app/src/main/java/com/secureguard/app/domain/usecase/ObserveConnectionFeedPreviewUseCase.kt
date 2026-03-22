@@ -31,23 +31,27 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     }
                     ConnectionFeedPreview(
                         title = title,
-                        detail = detail
+                        detail = detail,
+                        riskLabel = mostRecent.riskLabel
                     )
                 }
                 vpnState == VpnProtectionState.On ->
                     ConnectionFeedPreview(
                         title = "Listening for new traffic",
-                        detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected."
+                        detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
+                        riskLabel = "Ready"
                     )
                 vpnState == VpnProtectionState.Starting ->
                     ConnectionFeedPreview(
                         title = "Protection is starting",
-                        detail = "SecureGuard is preparing the local tunnel before any connection events can show up."
+                        detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
+                        riskLabel = "Starting"
                     )
                 else ->
                     ConnectionFeedPreview(
                         title = "No live connections yet",
-                        detail = "Turn on protection mode to start building a local connection feed for app traffic."
+                        detail = "Turn on protection mode to start building a local connection feed for app traffic.",
+                        riskLabel = "Idle"
                     )
             }
         }

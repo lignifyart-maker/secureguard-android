@@ -19,7 +19,8 @@ data class PermissionAuditUiState(
     val vpnStatusMessage: String = "Protection mode is off. Turn it on when you want local network monitoring.",
     val connectionFeedPreview: ConnectionFeedPreview = ConnectionFeedPreview(
         title = "No live connections yet",
-        detail = "Turn on protection mode to start building a local connection feed for app traffic."
+        detail = "Turn on protection mode to start building a local connection feed for app traffic.",
+        riskLabel = "Idle"
     ),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,

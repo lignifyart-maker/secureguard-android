@@ -384,6 +384,10 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            RiskBadgeText(
+                text = preview.riskLabel,
+                color = connectionFeedAccent(preview.riskLabel)
+            )
             Text(
                 text = preview.title,
                 style = MaterialTheme.typography.titleSmall,
@@ -1163,6 +1167,15 @@ private fun protectionAccentColor(state: VpnProtectionState): Color = when (stat
     VpnProtectionState.Starting -> Color(0xFFB27A1F)
     VpnProtectionState.On -> Color(0xFF4A8C69)
     VpnProtectionState.Error -> Color(0xFFC55A54)
+}
+
+private fun connectionFeedAccent(label: String): Color = when (label) {
+    "Tracker" -> Color(0xFFC55A54)
+    "Sensitive" -> Color(0xFFDD8B42)
+    "Routine" -> Color(0xFF4A8C69)
+    "Ready" -> Color(0xFF4A8C69)
+    "Starting" -> Color(0xFFB27A1F)
+    else -> Color(0xFF6F7C92)
 }
 
 private data class StatusTone(
