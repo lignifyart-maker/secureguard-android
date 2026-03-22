@@ -340,6 +340,12 @@ private fun AuditContent(
             SecuritySuggestionCard(overview = state.securityOverview)
         }
 
+        if (state.securityOverview.watchApps.isNotEmpty()) {
+            item {
+                WatchAppsCard(apps = state.securityOverview.watchApps)
+            }
+        }
+
         if (state.securityOverview.closeCandidates.isNotEmpty()) {
             item {
                 CloseCandidatesCard(apps = state.securityOverview.closeCandidates)
@@ -790,6 +796,49 @@ private fun SecuritySuggestionCard(overview: SecurityOverview) {
             )
             overview.suggestions.forEach { suggestion ->
                 SuggestionRow(suggestion = suggestion)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WatchAppsCard(apps: List<AppScanResult>) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Keep an eye on these",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            apps.forEach { app ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = app.appName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = app.riskLevel.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
     }
