@@ -228,7 +228,7 @@ private fun LoadingState(innerPadding: PaddingValues) {
         ) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             Text(
-                text = "Preparing your safety check-in...",
+                text = "Preparing your on-device safety dashboard...",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -305,6 +305,10 @@ private fun AuditContent(
 
         item {
             PrimaryActionCard(overview = state.securityOverview)
+        }
+
+        item {
+            QuickStartCard(state = state.vpnProtectionState)
         }
 
         item {
@@ -413,7 +417,7 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "This is a gentle preview of recent VPN and DNS events, not a raw packet log.",
+                text = "This is your plain-language traffic view. It highlights recent DNS and UDP events instead of raw packet data.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -671,7 +675,7 @@ private fun ProtectionModeCard(
                 color = Color(0xFF4A8C69)
             )
             Text(
-                text = "SecureGuard uses Android's local VPN interface only for on-device analysis. Your traffic is not sent to an outside security server.",
+                text = "SecureGuard uses Android's local VPN interface to watch traffic on this phone only. Your traffic is not uploaded to an outside security server.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -709,12 +713,87 @@ private fun ProtectionModeCard(
             ) {
                 Text(
                     if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                        "Stop protection"
+                        "Stop local protection"
                     } else {
-                        "Turn on protection"
+                        "Start local protection"
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun QuickStartCard(state: VpnProtectionState) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6EFE4)),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                    "What SecureGuard is doing now"
+                } else {
+                    "Get useful results in 3 steps"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.75f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ChecklistItem(
+                        icon = Icons.Outlined.HealthAndSafety,
+                        label = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                            "Protection is running on this phone"
+                        } else {
+                            "Start local protection"
+                        },
+                        detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                            "SecureGuard is using Android's local VPN mode to inspect traffic on-device only."
+                        } else {
+                            "Approve Android's VPN prompt once so SecureGuard can start watching traffic locally."
+                        }
+                    )
+                    ChecklistItem(
+                        icon = Icons.Outlined.NetworkWifi,
+                        label = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                            "Use your phone normally for a minute"
+                        } else {
+                            "Open a few apps after enabling it"
+                        },
+                        detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                            "Open a browser, chat app, or video app to generate real DNS and UDP activity."
+                        } else {
+                            "A browser, chat app, or streaming app will give the dashboard something real to show."
+                        }
+                    )
+                    ChecklistItem(
+                        icon = Icons.Outlined.People,
+                        label = "Read the activity feed",
+                        detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                            "The feed will show recent app targets and event types when Android can map them."
+                        } else {
+                            "Recent activity will show app names, targets, and event types instead of raw packet data."
+                        }
+                    )
+                }
+            }
+            Text(
+                text = "This is a calm local monitor, not a remote VPN service or a raw packet sniffer.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -761,13 +840,13 @@ private fun HeroCard(
             }
 
             Text(
-                text = overview.headline,
+                text = "See which apps are talking, before it feels invisible.",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = overview.summary,
+                text = "SecureGuard turns Android's local VPN mode into an on-device activity dashboard, so you can spot DNS lookups, app traffic hints, and risky patterns without sending your traffic to a cloud scanner.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -777,7 +856,7 @@ private fun HeroCard(
                 scoreDetail = overview.scoreDetail
             )
             Text(
-                text = "$notableApps of $totalApps apps are worth a second look. Last scan: $lastScanLabel",
+                text = "$notableApps of $totalApps installed apps are worth a second look. Last scan: $lastScanLabel",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
             )
@@ -789,7 +868,7 @@ private fun HeroCard(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
-                Text("Run another check")
+                Text("Refresh device check")
             }
         }
     }

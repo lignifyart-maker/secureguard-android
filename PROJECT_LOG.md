@@ -72,6 +72,13 @@
 - Kept non-DNS logging deduplicated with a short signature window so the feed does not flood immediately.
 - Updated live feed and recent-activity labels so these new UDP events render as meaningful traffic types instead of falling back to DNS wording.
 
+## First Impression Round
+
+- Rewrote the hero copy so the app explains its value in plain language on first launch.
+- Added a quick-start card that tells users exactly how to get useful results in three steps.
+- Tightened protection-mode language so it feels more product-like and less like internal tooling copy.
+- Clarified that the live feed is a plain-language traffic view rather than a packet log.
+
 ## Current State
 
 - `assembleDebug` passes.
