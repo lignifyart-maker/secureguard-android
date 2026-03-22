@@ -865,7 +865,7 @@ private fun CloseCandidatesCard(apps: List<AppScanResult>) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Safe to close first",
+                text = "Safe to close first (${apps.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
