@@ -36,6 +36,9 @@ data class PermissionAuditUiState(
         summary = "No recent events yet.",
         items = emptyList()
     ),
+    val isClearingRecentActivity: Boolean = false,
+    val recentActivityStatusMessage: String? = null,
+    val isRecentActivityExpanded: Boolean = false,
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
         networkName = "Checking network...",

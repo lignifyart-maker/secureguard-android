@@ -46,12 +46,25 @@
 - Surfaced attribution status in the live feed source text.
 - Added attribution state badges to the recent-activity panel.
 
+## Recent Activity UX Round
+
+- Added a guarded clear flow for recent activity so repeated taps do not fire duplicate clears.
+- Surfaced transient clear-status copy in the recent-activity card.
+- Improved the empty state copy so it explains the difference between protection-off and waiting-for-traffic states.
+- Tightened recent activity row layout with clearer event, risk, and attribution chips.
+
+## Recent Activity Expansion Round
+
+- Expanded recent activity observation so the dashboard can keep a deeper local history window.
+- Added a `View all` and `Collapse` path on the recent-activity card instead of keeping it fixed to three rows.
+- Preserved a compact three-row preview by default while allowing the full in-place history list when needed.
+
 ## Current State
 
 - `assembleDebug` passes.
 - Recent activity now appears as a dashboard section rather than a single preview string.
 - The UI is still a summary view; it is not yet a full drill-down screen.
-- Recent activity is now a usable dashboard panel, but not yet a dedicated history screen.
+- Recent activity is now a usable dashboard panel with an expandable in-place history view, but not yet a dedicated history screen.
 - Per-app attribution is now partially wired for outgoing DNS events, with better fallback handling and clearer dashboard status.
 
 ## Next Recommended Steps

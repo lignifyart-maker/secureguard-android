@@ -90,6 +90,7 @@ fun PermissionAuditRoute(
         state = uiState,
         onRefresh = viewModel::refresh,
         onClearRecentActivity = viewModel::clearRecentActivity,
+        onToggleRecentActivityExpanded = viewModel::toggleRecentActivityExpanded,
         onRequestWifiPermission = {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         },
@@ -155,6 +156,7 @@ private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
+    onToggleRecentActivityExpanded: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -194,6 +196,7 @@ private fun PermissionAuditScreen(
                 innerPadding = innerPadding,
                 onRefresh = onRefresh,
                 onClearRecentActivity = onClearRecentActivity,
+                onToggleRecentActivityExpanded = onToggleRecentActivityExpanded,
                 onRequestWifiPermission = onRequestWifiPermission,
                 onTrustNetwork = onTrustNetwork,
                 onRemoveTrustedNetwork = onRemoveTrustedNetwork,
@@ -271,6 +274,7 @@ private fun AuditContent(
     innerPadding: PaddingValues,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
+    onToggleRecentActivityExpanded: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -320,7 +324,12 @@ private fun AuditContent(
         item {
             RecentActivityCard(
                 timeline = state.recentConnectionTimeline,
-                onClear = onClearRecentActivity
+                vpnState = state.vpnProtectionState,
+                isClearing = state.isClearingRecentActivity,
+                isExpanded = state.isRecentActivityExpanded,
+                statusMessage = state.recentActivityStatusMessage,
+                onClear = onClearRecentActivity,
+                onToggleExpanded = onToggleRecentActivityExpanded
             )
         }
 
@@ -474,8 +483,15 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
 @Composable
 private fun RecentActivityCard(
     timeline: RecentConnectionTimeline,
-    onClear: () -> Unit
+    vpnState: VpnProtectionState,
+    isClearing: Boolean,
+    isExpanded: Boolean,
+    statusMessage: String?,
+    onClear: () -> Unit,
+    onToggleExpanded: () -> Unit
 ) {
+    val visibleItems = if (isExpanded) timeline.items else timeline.items.take(3)
+
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(28.dp)
@@ -486,40 +502,97 @@ private fun RecentActivityCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
             ) {
                 Text(
                     text = "Recent activity",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
                 )
-                if (timeline.items.isNotEmpty()) {
-                    TextButtonLike(
-                        text = "Clear",
-                        onClick = onClear
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (timeline.hasMoreThanPreview) {
+                        TextButtonLike(
+                            text = if (isExpanded) "Collapse" else "View all",
+                            onClick = onToggleExpanded
+                        )
+                    }
+                    if (timeline.items.isNotEmpty() || isClearing) {
+                        TextButtonLike(
+                            text = if (isClearing) "Clearing..." else "Clear",
+                            enabled = !isClearing,
+                            onClick = onClear
+                        )
+                    }
                 }
+            }
+            if (isExpanded) {
+                Text(
+                    text = "Showing ${visibleItems.size} recent event(s)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else if (timeline.hasMoreThanPreview) {
+                Text(
+                    text = "Showing the latest 3 of ${timeline.items.size} event(s)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Text(
                 text = timeline.summary,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (statusMessage != null) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = statusMessage,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
             if (timeline.items.isEmpty()) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                 ) {
-                    Text(
-                        text = "Turn on protection mode to start filling in this recent activity list.",
-                        modifier = Modifier.padding(14.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
+                                "No recent activity yet"
+                            } else {
+                                "Protection mode is off"
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
+                                "SecureGuard is watching for new DNS events. Recent app lookups will appear here once traffic starts moving."
+                            } else {
+                                "Turn on protection mode to start collecting recent DNS lookups and app attribution in this panel."
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
-            timeline.items.take(3).forEach { item ->
+            visibleItems.forEach { item ->
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
@@ -527,42 +600,44 @@ private fun RecentActivityCard(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
                             text = item.title,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            text = item.riskLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = connectionFeedAccent(item.riskLabel)
-                        )
-                        Text(
-                            text = item.eventLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        RiskBadgeText(
-                            text = item.attributionStateLabel,
-                            color = attributionAccent(item.attributionStateLabel)
-                        )
-                        Text(
-                            text = item.sourceLabel,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = item.attributionLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = item.relativeTime,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RiskBadgeText(
+                                text = item.riskLabel,
+                                color = connectionFeedAccent(item.riskLabel)
+                            )
+                            EventChip(text = item.eventLabel)
+                            RiskBadgeText(
+                                text = item.attributionStateLabel,
+                                color = attributionAccent(item.attributionStateLabel)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = item.sourceLabel,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            Text(
+                                text = item.attributionLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = item.relativeTime,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -1269,19 +1344,44 @@ private fun WifiSafetyCard(
 @Composable
 private fun TextButtonLike(
     text: String,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        color = if (enabled) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        },
         modifier = Modifier.wrapContentWidth()
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            color = MaterialTheme.colorScheme.primary,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
             style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+@Composable
+private fun EventChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelMedium
         )
     }
 }

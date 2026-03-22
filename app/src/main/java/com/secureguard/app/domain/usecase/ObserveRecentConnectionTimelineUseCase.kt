@@ -10,10 +10,11 @@ import kotlinx.coroutines.flow.map
 class ObserveRecentConnectionTimelineUseCase @Inject constructor(
     private val networkEventRepository: NetworkEventRepository
 ) {
-    operator fun invoke(limit: Int = 5): Flow<RecentConnectionTimeline> {
+    operator fun invoke(limit: Int = 20): Flow<RecentConnectionTimeline> {
         return networkEventRepository.observeRecentEvents(limit).map { events ->
             RecentConnectionTimeline(
                 summary = summaryFor(events.size),
+                hasMoreThanPreview = events.size > 3,
                 items = events.map { event ->
                     RecentConnectionItem(
                         title = event.host ?: event.ipAddress ?: "Unknown target",

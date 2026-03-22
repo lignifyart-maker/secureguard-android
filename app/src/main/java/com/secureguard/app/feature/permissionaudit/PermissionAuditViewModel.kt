@@ -16,6 +16,7 @@ import java.text.DateFormat
 import java.util.Date
 import javax.inject.Inject
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -106,7 +107,52 @@ class PermissionAuditViewModel @Inject constructor(
 
     fun clearRecentActivity() {
         viewModelScope.launch {
-            clearNetworkEventsUseCase()
+            if (_uiState.value.isClearingRecentActivity) return@launch
+            val hadItems = _uiState.value.recentConnectionTimeline.items.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    isClearingRecentActivity = true,
+                    recentActivityStatusMessage = null
+                )
+            }
+            runCatching {
+                clearNetworkEventsUseCase()
+            }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isClearingRecentActivity = false,
+                            recentActivityStatusMessage = if (hadItems) {
+                                "Recent activity cleared."
+                            } else {
+                                "Recent activity is already empty."
+                            }
+                        )
+                    }
+                    delay(2500)
+                    _uiState.update { current ->
+                        if (current.recentConnectionTimeline.items.isEmpty()) {
+                            current.copy(recentActivityStatusMessage = null)
+                        } else {
+                            current
+                        }
+                    }
+                }
+                .onFailure { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isClearingRecentActivity = false,
+                            recentActivityStatusMessage = throwable.message
+                                ?: "Could not clear recent activity."
+                        )
+                    }
+                }
+        }
+    }
+
+    fun toggleRecentActivityExpanded() {
+        _uiState.update { current ->
+            current.copy(isRecentActivityExpanded = !current.isRecentActivityExpanded)
         }
     }
 
@@ -176,7 +222,19 @@ class PermissionAuditViewModel @Inject constructor(
         recentTimelineJob = viewModelScope.launch {
             observeRecentConnectionTimelineUseCase().collect { timeline ->
                 _uiState.update { current ->
-                    current.copy(recentConnectionTimeline = timeline)
+                    current.copy(
+                        recentConnectionTimeline = timeline,
+                        isRecentActivityExpanded = if (timeline.hasMoreThanPreview) {
+                            current.isRecentActivityExpanded
+                        } else {
+                            false
+                        },
+                        recentActivityStatusMessage = if (timeline.items.isNotEmpty()) {
+                            null
+                        } else {
+                            current.recentActivityStatusMessage
+                        }
+                    )
                 }
             }
         }
