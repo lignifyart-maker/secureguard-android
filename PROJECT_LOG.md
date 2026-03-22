@@ -39,13 +39,20 @@
 - Persisted attribution confidence on `network_events`.
 - Surfaced attribution status in the recent-activity panel.
 
+## Attribution Hardening Round
+
+- Limited attribution logging to outgoing DNS queries so reply traffic does not muddy app mapping.
+- Hardened owner lookup fallback for address parsing and UID-without-package cases.
+- Surfaced attribution status in the live feed source text.
+- Added attribution state badges to the recent-activity panel.
+
 ## Current State
 
 - `assembleDebug` passes.
 - Recent activity now appears as a dashboard section rather than a single preview string.
 - The UI is still a summary view; it is not yet a full drill-down screen.
 - Recent activity is now a usable dashboard panel, but not yet a dedicated history screen.
-- Per-app attribution is now partially wired for DNS events, but it still needs broader validation and better fallback handling.
+- Per-app attribution is now partially wired for outgoing DNS events, with better fallback handling and clearer dashboard status.
 
 ## Next Recommended Steps
 
@@ -56,3 +63,4 @@
 2. Push the clear action all the way through UX copy and verify it behaves well after repeated toggles.
 3. Add a dedicated recent-activity screen or expanded panel.
 4. Continue per-app attribution hardening for VPN events and extend beyond the current DNS-first path.
+5. Start shaping a broader non-DNS attribution path after the DNS-first route is stable enough.
