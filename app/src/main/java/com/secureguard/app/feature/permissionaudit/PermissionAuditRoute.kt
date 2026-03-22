@@ -560,7 +560,10 @@ private fun HeroCard(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-            ScoreBubble(score = overview.score)
+            ScoreBubble(
+                score = overview.score,
+                scoreBandLabel = overview.scoreBandLabel
+            )
             Text(
                 text = "$notableApps of $totalApps apps are worth a second look. Last scan: $lastScanLabel",
                 style = MaterialTheme.typography.bodyMedium,
@@ -581,7 +584,10 @@ private fun HeroCard(
 }
 
 @Composable
-private fun ScoreBubble(score: Int) {
+private fun ScoreBubble(
+    score: Int,
+    scoreBandLabel: String
+) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
         shape = RoundedCornerShape(20.dp)
@@ -599,6 +605,11 @@ private fun ScoreBubble(score: Int) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = scoreBandLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

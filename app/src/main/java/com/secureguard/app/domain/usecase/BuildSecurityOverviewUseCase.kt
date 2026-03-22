@@ -33,6 +33,12 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             score >= 55 -> "A few risks deserve attention"
             else -> "A stronger safety cleanup would help"
         }
+        val scoreBandLabel = when {
+            score >= 86 -> "Calm"
+            score >= 70 -> "Mostly steady"
+            score >= 55 -> "Needs attention"
+            else -> "Tidy-up needed"
+        }
 
         val summary = when {
             criticalCount > 0 ->
@@ -121,6 +127,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
 
         return SecurityOverview(
             score = score,
+            scoreBandLabel = scoreBandLabel,
             headline = headline,
             summary = summary,
             primaryActionTitle = primaryAction.first,

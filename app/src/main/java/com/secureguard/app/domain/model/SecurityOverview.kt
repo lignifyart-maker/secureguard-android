@@ -2,6 +2,7 @@ package com.secureguard.app.domain.model
 
 data class SecurityOverview(
     val score: Int,
+    val scoreBandLabel: String,
     val headline: String,
     val summary: String,
     val primaryActionTitle: String,
