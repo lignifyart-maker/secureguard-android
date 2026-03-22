@@ -248,6 +248,7 @@ class LocalVpnService : VpnService() {
             .setContentIntent(pendingIntent)
             .addAction(0, "Stop", stopIntent)
             .setCategory(CATEGORY_SERVICE)
+            .setOnlyAlertOnce(true)
             .setOngoing(true)
             .build()
     }
