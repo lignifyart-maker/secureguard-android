@@ -30,6 +30,8 @@ data class PermissionAuditUiState(
         score = 72,
         headline = "Checking your phone's safety rhythm",
         summary = "SecureGuard is preparing a simple overview of what matters most.",
+        primaryActionTitle = "Preparing the best next step",
+        primaryActionDetail = "The app is figuring out the calmest, highest-impact thing to do first.",
         suggestions = listOf(
             SecuritySuggestion(
                 title = "Preparing suggestions",

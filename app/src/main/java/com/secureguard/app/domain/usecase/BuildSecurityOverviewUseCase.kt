@@ -45,6 +45,21 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
                 "Nothing alarming jumped out immediately, but SecureGuard still found some things worth keeping tidy."
         }
 
+        val primaryAction = when {
+            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky ->
+                "Pause sensitive activity" to "This network looks open, so save banking, password changes, and important logins for later."
+            criticalCount > 0 -> {
+                val topCritical = apps.firstOrNull { it.riskLevel == RiskLevel.Critical }
+                "Review ${topCritical?.appName ?: "the riskiest app"}" to
+                    (topCritical?.riskReasons?.joinToString(separator = " / ")
+                        ?: "One app stands out as unusually demanding for its category.")
+            }
+            highCount > 0 ->
+                "Check a few permission-heavy apps" to "Some apps asked for more access than usual. A quick cleanup would reduce noise and risk."
+            else ->
+                "Keep the current setup tidy" to "Nothing looks urgent right now. A light review of apps you rarely use is enough."
+        }
+
         val suggestions = buildList {
             if (wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky) {
                 add(
@@ -100,6 +115,8 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             score = score,
             headline = headline,
             summary = summary,
+            primaryActionTitle = primaryAction.first,
+            primaryActionDetail = primaryAction.second,
             suggestions = suggestions,
             watchApps = watchApps,
             closeCandidates = closeCandidates

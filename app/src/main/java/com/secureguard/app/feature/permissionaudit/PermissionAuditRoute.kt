@@ -187,6 +187,10 @@ private fun AuditContent(
         }
 
         item {
+            PrimaryActionCard(overview = state.securityOverview)
+        }
+
+        item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniStatusCard(
                     title = "High alert",
@@ -330,6 +334,47 @@ private fun ScoreBubble(score: Int) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryActionCard(overview: SecurityOverview) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Best next step",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = overview.primaryActionTitle,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = overview.primaryActionDetail,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
