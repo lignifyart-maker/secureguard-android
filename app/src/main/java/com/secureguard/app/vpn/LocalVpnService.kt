@@ -34,6 +34,8 @@ class LocalVpnService : VpnService() {
     private var tunnelInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var readLoopJob: Job? = null
+    private var lastLoggedDnsHost: String? = null
+    private var lastLoggedDnsAt: Long = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -188,6 +190,13 @@ class LocalVpnService : VpnService() {
                     length = udpDatagram.payloadLength
                 ) ?: continue
 
+                val now = System.currentTimeMillis()
+                if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
+                    continue
+                }
+                lastLoggedDnsHost = dnsQuestion.host
+                lastLoggedDnsAt = now
+
                 networkEventDao.insert(
                     NetworkEventEntity(
                         packageName = null,
@@ -197,7 +206,7 @@ class LocalVpnService : VpnService() {
                         protocol = "UDP/53",
                         eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
                         riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
-                        createdAt = System.currentTimeMillis()
+                        createdAt = now
                     )
                 )
             }
