@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.Notification.CATEGORY_SERVICE
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -246,6 +247,7 @@ class LocalVpnService : VpnService() {
             .setSubText("Local on-device analysis")
             .setContentIntent(pendingIntent)
             .addAction(0, "Stop", stopIntent)
+            .setCategory(CATEGORY_SERVICE)
             .setOngoing(true)
             .build()
     }
