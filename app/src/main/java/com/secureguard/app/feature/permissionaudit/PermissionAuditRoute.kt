@@ -895,6 +895,10 @@ private fun WifiSafetyCard(
                 text = snapshot.safetyLevel.label,
                 color = wifiAccentColor(snapshot.safetyLevel)
             )
+            RiskBadgeText(
+                text = snapshot.familiarityLabel,
+                color = MaterialTheme.colorScheme.secondary
+            )
 
             Text(
                 text = snapshot.summary,

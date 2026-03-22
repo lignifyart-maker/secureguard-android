@@ -6,6 +6,7 @@ data class WifiSecuritySnapshot(
     val canManageTrust: Boolean,
     val isTrustedNetwork: Boolean,
     val securityLabel: String,
+    val familiarityLabel: String,
     val safetyLevel: WifiSafetyLevel,
     val crowdLabel: String,
     val summary: String,

@@ -34,6 +34,7 @@ data class PermissionAuditUiState(
         canManageTrust = false,
         isTrustedNetwork = false,
         securityLabel = "Unknown",
+        familiarityLabel = "Checking network familiarity...",
         safetyLevel = WifiSafetyLevel.Unknown,
         crowdLabel = "Checking whether this Wi-Fi feels shared...",
         summary = "SecureGuard is preparing your network check.",

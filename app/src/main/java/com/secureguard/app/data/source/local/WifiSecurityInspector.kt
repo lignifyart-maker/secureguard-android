@@ -36,6 +36,7 @@ class WifiSecurityInspector @Inject constructor(
                 canManageTrust = false,
                 isTrustedNetwork = false,
                 securityLabel = "Cellular or offline",
+                familiarityLabel = "Not on Wi-Fi",
                 safetyLevel = WifiSafetyLevel.Safe,
                 crowdLabel = "Not a shared Wi-Fi right now",
                 summary = "You are not currently on Wi-Fi.",
@@ -73,6 +74,11 @@ class WifiSecurityInspector @Inject constructor(
             localNetworkSnapshot.visibleDeviceCount <= 3 -> "Feels like a smaller private network"
             localNetworkSnapshot.visibleDeviceCount <= 7 -> "Looks like a lightly shared Wi-Fi"
             else -> "Looks like a shared or busy Wi-Fi"
+        }
+        val familiarityLabel = when {
+            isTrustedNetwork -> "Trusted by you"
+            localNetworkSnapshot.visibleDeviceCount <= 3 -> "Feels familiar"
+            else -> "Treat as shared"
         }
 
         val safetyLevel = when (securityLabel) {
@@ -131,6 +137,7 @@ class WifiSecurityInspector @Inject constructor(
             canManageTrust = canManageTrust,
             isTrustedNetwork = isTrustedNetwork,
             securityLabel = securityLabel,
+            familiarityLabel = familiarityLabel,
             safetyLevel = safetyLevel,
             crowdLabel = crowdLabel,
             summary = summary,
