@@ -28,7 +28,7 @@ class DnsPacketParser @Inject constructor() {
         val queryType = readUnsignedShort(buffer, cursor)
 
         return DnsQuestion(
-            host = labels.joinToString("."),
+            host = labels.joinToString(".").trimEnd('.').lowercase(),
             queryType = queryType
         )
     }
