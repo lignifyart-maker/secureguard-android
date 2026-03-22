@@ -479,36 +479,44 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            if (timeline.items.isEmpty()) {
+                Text(
+                    text = "Turn on protection mode to start filling in this recent activity list.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             timeline.items.take(3).forEach { item ->
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
                 ) {
-                    Text(
-                        text = item.title,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = item.riskLabel,
-                        modifier = Modifier.padding(start = 14.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = connectionFeedAccent(item.riskLabel)
-                    )
-                    Text(
-                        text = item.sourceLabel,
-                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = item.relativeTime,
-                        modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = item.riskLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = connectionFeedAccent(item.riskLabel)
+                        )
+                        Text(
+                            text = item.sourceLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = item.relativeTime,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
