@@ -3,6 +3,7 @@ package com.secureguard.app.feature.permissionaudit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.secureguard.app.core.datastore.SettingsDataStore
+import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
 import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.DateFormat
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class PermissionAuditViewModel @Inject constructor(
     private val scanInstalledAppsUseCase: ScanInstalledAppsUseCase,
+    private val getWifiSecuritySnapshotUseCase: GetWifiSecuritySnapshotUseCase,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PermissionAuditUiState())
@@ -31,12 +33,17 @@ class PermissionAuditViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            runCatching { scanInstalledAppsUseCase() }
-                .onSuccess { apps ->
+            runCatching {
+                val apps = scanInstalledAppsUseCase()
+                val wifiSnapshot = getWifiSecuritySnapshotUseCase()
+                apps to wifiSnapshot
+            }
+                .onSuccess { (apps, wifiSnapshot) ->
                     _uiState.update { current ->
                         current.copy(
                             isLoading = false,
                             apps = apps,
+                            wifiSnapshot = wifiSnapshot,
                             errorMessage = null
                         )
                     }

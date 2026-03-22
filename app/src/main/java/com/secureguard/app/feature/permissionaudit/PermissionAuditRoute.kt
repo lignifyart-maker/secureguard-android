@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.NetworkWifi
 import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Button
@@ -47,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.RiskLevel
+import com.secureguard.app.domain.model.WifiSafetyLevel
+import com.secureguard.app.domain.model.WifiSecuritySnapshot
 
 @Composable
 fun PermissionAuditRoute(
@@ -202,6 +205,10 @@ private fun AuditContent(
 
         item {
             GentleChecklist(apps = state.apps)
+        }
+
+        item {
+            WifiSafetyCard(snapshot = state.wifiSnapshot)
         }
 
         item {
@@ -397,6 +404,97 @@ private fun GentleChecklist(apps: List<AppScanResult>) {
 }
 
 @Composable
+private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = wifiContainerColor(snapshot.safetyLevel)
+        ),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                            shape = CircleShape
+                        )
+                        .padding(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.NetworkWifi,
+                        contentDescription = null,
+                        tint = wifiAccentColor(snapshot.safetyLevel)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Current network vibe",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = snapshot.networkName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            RiskBadgeText(
+                text = snapshot.safetyLevel.label,
+                color = wifiAccentColor(snapshot.safetyLevel)
+            )
+
+            Text(
+                text = snapshot.summary,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = snapshot.detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Text(
+                text = "Protection: ${snapshot.securityLabel}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            snapshot.gatewayAddress?.let {
+                Text(
+                    text = "Gateway: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            snapshot.localAddress?.let {
+                Text(
+                    text = "Local address: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (snapshot.permissionLimited) {
+                Text(
+                    text = "Tip: allow location later if you want more detailed Wi-Fi identification.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ChecklistItem(
     icon: ImageVector,
     label: String,
@@ -505,6 +603,24 @@ private fun RiskBadge(level: RiskLevel) {
     }
 }
 
+@Composable
+private fun RiskBadgeText(
+    text: String,
+    color: Color
+) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = color
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
 private fun heroHeadline(notableApps: Int): String = when {
     notableApps == 0 -> "Everything looks calm"
     notableApps <= 2 -> "Only a few apps need a look"
@@ -526,6 +642,21 @@ private fun riskBadgeColor(level: RiskLevel): Color = when (level) {
     RiskLevel.High -> Color(0xFFDD8B42)
     RiskLevel.Medium -> Color(0xFFC6A64D)
     RiskLevel.Safe -> Color(0xFF5D9971)
+}
+
+@Composable
+private fun wifiContainerColor(level: WifiSafetyLevel): Color = when (level) {
+    WifiSafetyLevel.Safe -> Color(0xFFDFF5EC)
+    WifiSafetyLevel.Caution -> Color(0xFFFFF3D8)
+    WifiSafetyLevel.Risky -> Color(0xFFFFE4DF)
+    WifiSafetyLevel.Unknown -> MaterialTheme.colorScheme.surface
+}
+
+private fun wifiAccentColor(level: WifiSafetyLevel): Color = when (level) {
+    WifiSafetyLevel.Safe -> Color(0xFF4A8C69)
+    WifiSafetyLevel.Caution -> Color(0xFFB27A1F)
+    WifiSafetyLevel.Risky -> Color(0xFFC55A54)
+    WifiSafetyLevel.Unknown -> Color(0xFF6F7C92)
 }
 
 private data class StatusTone(
