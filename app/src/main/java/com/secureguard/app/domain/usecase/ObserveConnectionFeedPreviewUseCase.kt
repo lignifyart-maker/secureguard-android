@@ -39,10 +39,17 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                             else -> "${describeQueryEvent(mostRecent.eventType)} / ${humanizeRisk(mostRecent.riskLabel)}"
                         }
                     }
+                    val actionHint = when (mostRecent.riskLabel) {
+                        "Tracker" -> "If this app feels optional, it is a good one to review or close first."
+                        "Sensitive" -> "If you were about to sign in or bank, pause and make sure the app is the one you expected."
+                        "Routine" -> "This looks routine, so you usually do not need to act on it."
+                        else -> "Keep an eye on this feed if you want a better sense of what your phone is doing."
+                    }
                     ConnectionFeedPreview(
                         title = title,
                         targetLabel = target,
                         detail = detail,
+                        actionHint = actionHint,
                         riskLabel = mostRecent.riskLabel,
                         relativeTime = relativeTimeFrom(mostRecent.createdAt),
                         recentCount = events.size
@@ -53,6 +60,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         title = "Listening for new traffic",
                         targetLabel = "Waiting for the first target",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
+                        actionHint = "Leave protection mode on for a moment and this card will start to fill in.",
                         riskLabel = "Ready",
                         relativeTime = "now",
                         recentCount = 0
@@ -62,6 +70,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         title = "Protection is starting",
                         targetLabel = "Tunnel is still warming up",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
+                        actionHint = "Give it a few seconds before expecting any live event hints.",
                         riskLabel = "Starting",
                         relativeTime = "now",
                         recentCount = 0
@@ -71,6 +80,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         title = "No live connections yet",
                         targetLabel = "No target yet",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
+                        actionHint = "When you want a calm traffic overview, turn protection mode on first.",
                         riskLabel = "Idle",
                         relativeTime = "waiting",
                         recentCount = 0

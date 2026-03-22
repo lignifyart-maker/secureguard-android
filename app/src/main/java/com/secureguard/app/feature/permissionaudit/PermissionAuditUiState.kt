@@ -22,6 +22,7 @@ data class PermissionAuditUiState(
         title = "No live connections yet",
         targetLabel = "No target yet",
         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
+        actionHint = "When you want a calm traffic overview, turn protection mode on first.",
         riskLabel = "Idle",
         relativeTime = "waiting",
         recentCount = 0
