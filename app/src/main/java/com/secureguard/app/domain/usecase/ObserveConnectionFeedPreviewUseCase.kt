@@ -49,7 +49,10 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     val recentSummary = recentSummaryFor(events.size)
                     ConnectionFeedPreview(
                         title = title,
-                        sourceLabel = sourceLabelFor(appName),
+                        sourceLabel = sourceLabelFor(
+                            appName = appName,
+                            attributionLabel = mostRecent.attributionLabel
+                        ),
                         targetLabel = target,
                         eventLabel = eventLabelFor(mostRecent.eventType),
                         detail = detail,
@@ -133,9 +136,11 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         else -> "DNS lookup"
     }
 
-    private fun sourceLabelFor(appName: String): String = when (appName) {
-        "SecureGuard" -> "Source: SecureGuard"
-        "Unknown app" -> "Source: app not mapped yet"
+    private fun sourceLabelFor(appName: String, attributionLabel: String?): String = when {
+        appName == "SecureGuard" -> "Source: SecureGuard"
+        appName == "Unknown app" && !attributionLabel.isNullOrBlank() -> "Source: app not mapped yet / $attributionLabel"
+        appName == "Unknown app" -> "Source: app not mapped yet"
+        !attributionLabel.isNullOrBlank() -> "Source: $appName / $attributionLabel"
         else -> "Source: $appName"
     }
 
