@@ -6,6 +6,7 @@ import com.secureguard.app.core.datastore.SettingsDataStore
 import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
 import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
 import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
+import com.secureguard.app.vpn.LocalVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -30,6 +31,7 @@ class PermissionAuditViewModel @Inject constructor(
     init {
         observeLastScan()
         observeTrustedWifiNetworks()
+        observeVpnState()
         refresh()
     }
 
@@ -105,6 +107,23 @@ class PermissionAuditViewModel @Inject constructor(
                     current.copy(
                         trustedWifiNetworks = networks.sorted()
                     )
+                }
+            }
+        }
+    }
+
+    private fun observeVpnState() {
+        viewModelScope.launch {
+            LocalVpnService.serviceState.collect { state ->
+                _uiState.update { current ->
+                    current.copy(vpnProtectionState = state)
+                }
+            }
+        }
+        viewModelScope.launch {
+            LocalVpnService.statusMessage.collect { message ->
+                _uiState.update { current ->
+                    current.copy(vpnStatusMessage = message)
                 }
             }
         }

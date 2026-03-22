@@ -1,8 +1,13 @@
 package com.secureguard.app.feature.permissionaudit
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.VpnService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,18 +60,28 @@ import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.RiskLevel
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
+import com.secureguard.app.domain.model.VpnProtectionState
 import com.secureguard.app.domain.model.WifiSafetyLevel
 import com.secureguard.app.domain.model.WifiSecuritySnapshot
+import com.secureguard.app.vpn.LocalVpnService
 
 @Composable
 fun PermissionAuditRoute(
     viewModel: PermissionAuditViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) {
         viewModel.refresh()
+    }
+    val vpnPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            ContextCompat.startForegroundService(context, LocalVpnService.startIntent(context))
+        }
     }
     PermissionAuditScreen(
         state = uiState,
@@ -78,6 +94,17 @@ fun PermissionAuditRoute(
         },
         onRemoveTrustedNetwork = { ssid ->
             viewModel.removeTrustedWifi(ssid)
+        },
+        onEnableProtection = {
+            val intent = VpnService.prepare(context)
+            if (intent != null) {
+                vpnPermissionLauncher.launch(intent)
+            } else {
+                ContextCompat.startForegroundService(context, LocalVpnService.startIntent(context))
+            }
+        },
+        onDisableProtection = {
+            context.startService(LocalVpnService.stopIntent(context))
         }
     )
 }
@@ -89,7 +116,9 @@ private fun PermissionAuditScreen(
     onRefresh: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
-    onRemoveTrustedNetwork: (String) -> Unit
+    onRemoveTrustedNetwork: (String) -> Unit,
+    onEnableProtection: () -> Unit,
+    onDisableProtection: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -123,7 +152,9 @@ private fun PermissionAuditScreen(
                 onRefresh = onRefresh,
                 onRequestWifiPermission = onRequestWifiPermission,
                 onTrustNetwork = onTrustNetwork,
-                onRemoveTrustedNetwork = onRemoveTrustedNetwork
+                onRemoveTrustedNetwork = onRemoveTrustedNetwork,
+                onEnableProtection = onEnableProtection,
+                onDisableProtection = onDisableProtection
             )
         }
     }
@@ -190,7 +221,9 @@ private fun AuditContent(
     onRefresh: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
-    onRemoveTrustedNetwork: (String) -> Unit
+    onRemoveTrustedNetwork: (String) -> Unit,
+    onEnableProtection: () -> Unit,
+    onDisableProtection: () -> Unit
 ) {
     val criticalApps = state.apps.count { it.riskLevel == RiskLevel.Critical }
     val highApps = state.apps.count { it.riskLevel == RiskLevel.High }
@@ -215,6 +248,15 @@ private fun AuditContent(
 
         item {
             PrimaryActionCard(overview = state.securityOverview)
+        }
+
+        item {
+            ProtectionModeCard(
+                state = state.vpnProtectionState,
+                statusMessage = state.vpnStatusMessage,
+                onEnableProtection = onEnableProtection,
+                onDisableProtection = onDisableProtection
+            )
         }
 
         item {
@@ -271,6 +313,65 @@ private fun AuditContent(
 
         items(state.apps.take(8), key = { it.packageName }) { app ->
             AppRiskCard(app = app)
+        }
+    }
+}
+
+@Composable
+private fun ProtectionModeCard(
+    state: VpnProtectionState,
+    statusMessage: String,
+    onEnableProtection: () -> Unit,
+    onDisableProtection: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Protection mode",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "SecureGuard uses Android's local VPN interface only for on-device analysis. Your traffic is not sent to an outside security server.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            RiskBadgeText(
+                text = state.label,
+                color = protectionAccentColor(state)
+            )
+            Text(
+                text = statusMessage,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(
+                onClick = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                    onDisableProtection
+                } else {
+                    onEnableProtection
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                        Color(0xFFC55A54)
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
+                )
+            ) {
+                Text(
+                    if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
+                        "Stop protection"
+                    } else {
+                        "Turn on protection"
+                    }
+                )
+            }
         }
     }
 }
@@ -974,6 +1075,13 @@ private fun wifiAccentColor(level: WifiSafetyLevel): Color = when (level) {
     WifiSafetyLevel.Caution -> Color(0xFFB27A1F)
     WifiSafetyLevel.Risky -> Color(0xFFC55A54)
     WifiSafetyLevel.Unknown -> Color(0xFF6F7C92)
+}
+
+private fun protectionAccentColor(state: VpnProtectionState): Color = when (state) {
+    VpnProtectionState.Off -> Color(0xFF6F7C92)
+    VpnProtectionState.Starting -> Color(0xFFB27A1F)
+    VpnProtectionState.On -> Color(0xFF4A8C69)
+    VpnProtectionState.Error -> Color(0xFFC55A54)
 }
 
 private data class StatusTone(
