@@ -27,7 +27,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
                         "VPN_STOPPED" -> "Local protection mode was turned off."
                         "VPN_ERROR" -> "SecureGuard could not keep the local tunnel alive."
-                        else -> "${mostRecent.protocol} ${humanizeRisk(mostRecent.riskLabel)} / ${mostRecent.eventType.lowercase()}"
+                        else -> "${describeQueryEvent(mostRecent.eventType)} / ${humanizeRisk(mostRecent.riskLabel)}"
                     }
                     ConnectionFeedPreview(
                         title = title,
@@ -62,5 +62,13 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "Sensitive" -> "touches a more sensitive domain"
         "Routine" -> "looks routine"
         else -> "was observed"
+    }
+
+    private fun describeQueryEvent(eventType: String): String = when (eventType) {
+        "DNS_A_QUERY" -> "asked for an IPv4 address"
+        "DNS_AAAA_QUERY" -> "asked for an IPv6 address"
+        "DNS_CNAME_QUERY" -> "followed a domain alias"
+        "DNS_MX_QUERY" -> "looked up mail routing"
+        else -> "generated a DNS lookup"
     }
 }
