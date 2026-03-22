@@ -184,8 +184,8 @@ class LocalVpnService : VpnService() {
                     availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
                 ) ?: continue
 
-                val isDnsTraffic = udpDatagram.sourcePort == 53 || udpDatagram.destinationPort == 53
-                if (!isDnsTraffic) continue
+                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
+                if (!isOutgoingDnsQuery) continue
 
                 val dnsQuestion = dnsParser.parseQuestion(
                     buffer = buffer,
@@ -199,12 +199,11 @@ class LocalVpnService : VpnService() {
                 }
                 lastLoggedDnsHost = dnsQuestion.host
                 lastLoggedDnsAt = now
-                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
                 val attribution = connectionOwnerResolver.resolveUdpOwner(
-                    localIp = if (isOutgoingDnsQuery) ipv4Packet.sourceIp else ipv4Packet.destinationIp,
-                    localPort = if (isOutgoingDnsQuery) udpDatagram.sourcePort else udpDatagram.destinationPort,
-                    remoteIp = if (isOutgoingDnsQuery) ipv4Packet.destinationIp else ipv4Packet.sourceIp,
-                    remotePort = if (isOutgoingDnsQuery) udpDatagram.destinationPort else udpDatagram.sourcePort
+                    localIp = ipv4Packet.sourceIp,
+                    localPort = udpDatagram.sourcePort,
+                    remoteIp = ipv4Packet.destinationIp,
+                    remotePort = udpDatagram.destinationPort
                 )
 
                 networkEventDao.insert(
