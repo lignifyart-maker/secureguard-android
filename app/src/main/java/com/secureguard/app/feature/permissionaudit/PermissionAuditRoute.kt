@@ -480,6 +480,10 @@ private fun ProtectionModeCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            RiskBadgeText(
+                text = "Local only",
+                color = Color(0xFF4A8C69)
+            )
             Text(
                 text = "SecureGuard uses Android's local VPN interface only for on-device analysis. Your traffic is not sent to an outside security server.",
                 style = MaterialTheme.typography.bodyMedium,
