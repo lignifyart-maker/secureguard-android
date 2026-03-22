@@ -232,12 +232,19 @@ class LocalVpnService : VpnService() {
             launchIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+        val stopIntent = PendingIntent.getService(
+            this,
+            1,
+            stopIntent(this),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle("SecureGuard Protection")
             .setContentText(contentText)
             .setContentIntent(pendingIntent)
+            .addAction(0, "Stop", stopIntent)
             .setOngoing(true)
             .build()
     }
