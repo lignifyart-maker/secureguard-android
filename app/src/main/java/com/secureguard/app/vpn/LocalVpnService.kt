@@ -162,6 +162,7 @@ class LocalVpnService : VpnService() {
             val ipv4Parser = runtimeEntryPoint.ipv4PacketParser()
             val udpParser = runtimeEntryPoint.udpDatagramParser()
             val dnsParser = runtimeEntryPoint.dnsPacketParser()
+            val domainRiskClassifier = runtimeEntryPoint.domainRiskClassifier()
             val networkEventDao = runtimeEntryPoint.networkEventDao()
             val buffer = ByteArray(32767)
 
@@ -195,7 +196,7 @@ class LocalVpnService : VpnService() {
                         ipAddress = ipv4Packet.destinationIp,
                         protocol = "UDP/53",
                         eventType = "DNS_QUERY",
-                        riskLabel = "Observed",
+                        riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
                         createdAt = System.currentTimeMillis()
                     )
                 )
