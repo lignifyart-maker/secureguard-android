@@ -41,6 +41,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     }
                     ConnectionFeedPreview(
                         title = title,
+                        targetLabel = target,
                         detail = detail,
                         riskLabel = mostRecent.riskLabel,
                         relativeTime = relativeTimeFrom(mostRecent.createdAt),
@@ -50,6 +51,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 vpnState == VpnProtectionState.On ->
                     ConnectionFeedPreview(
                         title = "Listening for new traffic",
+                        targetLabel = "Waiting for the first target",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
                         riskLabel = "Ready",
                         relativeTime = "now",
@@ -58,6 +60,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 vpnState == VpnProtectionState.Starting ->
                     ConnectionFeedPreview(
                         title = "Protection is starting",
+                        targetLabel = "Tunnel is still warming up",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
                         riskLabel = "Starting",
                         relativeTime = "now",
@@ -66,6 +69,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 else ->
                     ConnectionFeedPreview(
                         title = "No live connections yet",
+                        targetLabel = "No target yet",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
                         riskLabel = "Idle",
                         relativeTime = "waiting",
