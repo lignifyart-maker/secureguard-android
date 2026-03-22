@@ -26,6 +26,7 @@ data class PermissionAuditUiState(
         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
         actionHint = "When you want a calm traffic overview, turn protection mode on first.",
         activityLabel = "Idle",
+        recentSummary = "There is no recent live traffic to summarize yet.",
         riskLabel = "Idle",
         relativeTime = "waiting",
         recentCount = 0

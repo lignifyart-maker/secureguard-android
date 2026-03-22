@@ -8,6 +8,7 @@ data class ConnectionFeedPreview(
     val detail: String,
     val actionHint: String,
     val activityLabel: String,
+    val recentSummary: String,
     val riskLabel: String,
     val relativeTime: String,
     val recentCount: Int

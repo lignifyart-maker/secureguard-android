@@ -46,6 +46,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         else -> "Keep an eye on this feed if you want a better sense of what your phone is doing."
                     }
                     val activityLabel = activityLabelFor(events.size)
+                    val recentSummary = recentSummaryFor(events.size)
                     ConnectionFeedPreview(
                         title = title,
                         sourceLabel = sourceLabelFor(appName),
@@ -54,6 +55,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         detail = detail,
                         actionHint = actionHint,
                         activityLabel = activityLabel,
+                        recentSummary = recentSummary,
                         riskLabel = mostRecent.riskLabel,
                         relativeTime = relativeTimeFrom(mostRecent.createdAt),
                         recentCount = events.size
@@ -68,6 +70,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
                         actionHint = "Leave protection mode on for a moment and this card will start to fill in.",
                         activityLabel = "Quiet",
+                        recentSummary = "No recent connection events yet.",
                         riskLabel = "Ready",
                         relativeTime = "now",
                         recentCount = 0
@@ -81,6 +84,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
                         actionHint = "Give it a few seconds before expecting any live event hints.",
                         activityLabel = "Warming up",
+                        recentSummary = "The feed is still getting ready.",
                         riskLabel = "Starting",
                         relativeTime = "now",
                         recentCount = 0
@@ -94,6 +98,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
                         actionHint = "When you want a calm traffic overview, turn protection mode on first.",
                         activityLabel = "Idle",
+                        recentSummary = "There is no recent live traffic to summarize yet.",
                         riskLabel = "Idle",
                         relativeTime = "waiting",
                         recentCount = 0
@@ -139,6 +144,13 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         recentCount <= 4 -> "Light activity"
         recentCount <= 8 -> "Busy"
         else -> "Very busy"
+    }
+
+    private fun recentSummaryFor(recentCount: Int): String = when {
+        recentCount <= 1 -> "Only one very recent event is in view."
+        recentCount <= 4 -> "A small handful of recent events are in view."
+        recentCount <= 8 -> "This feed has picked up a noticeable burst of recent events."
+        else -> "This feed is fairly busy right now."
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {

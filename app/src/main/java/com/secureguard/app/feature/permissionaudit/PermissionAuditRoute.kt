@@ -441,8 +441,8 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Recent events: ${preview.recentCount}",
-                style = MaterialTheme.typography.labelMedium,
+                text = preview.recentSummary,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
