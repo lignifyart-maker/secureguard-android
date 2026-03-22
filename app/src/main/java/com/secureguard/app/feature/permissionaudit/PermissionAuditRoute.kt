@@ -404,6 +404,11 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
+                text = preview.eventLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
                 text = preview.detail,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

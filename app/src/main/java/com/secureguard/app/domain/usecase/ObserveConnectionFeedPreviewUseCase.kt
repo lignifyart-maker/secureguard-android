@@ -49,6 +49,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     ConnectionFeedPreview(
                         title = title,
                         targetLabel = target,
+                        eventLabel = eventLabelFor(mostRecent.eventType),
                         detail = detail,
                         actionHint = actionHint,
                         activityLabel = activityLabel,
@@ -61,6 +62,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     ConnectionFeedPreview(
                         title = "Listening for new traffic",
                         targetLabel = "Waiting for the first target",
+                        eventLabel = "DNS watch",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
                         actionHint = "Leave protection mode on for a moment and this card will start to fill in.",
                         activityLabel = "Quiet",
@@ -72,6 +74,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     ConnectionFeedPreview(
                         title = "Protection is starting",
                         targetLabel = "Tunnel is still warming up",
+                        eventLabel = "VPN startup",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
                         actionHint = "Give it a few seconds before expecting any live event hints.",
                         activityLabel = "Warming up",
@@ -83,6 +86,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     ConnectionFeedPreview(
                         title = "No live connections yet",
                         targetLabel = "No target yet",
+                        eventLabel = "Waiting",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
                         actionHint = "When you want a calm traffic overview, turn protection mode on first.",
                         activityLabel = "Idle",
@@ -107,6 +111,17 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_CNAME_QUERY" -> "followed a domain alias"
         "DNS_MX_QUERY" -> "looked up mail routing"
         else -> "generated a DNS lookup"
+    }
+
+    private fun eventLabelFor(eventType: String): String = when (eventType) {
+        "VPN_STARTED" -> "VPN started"
+        "VPN_STOPPED" -> "VPN stopped"
+        "VPN_ERROR" -> "VPN issue"
+        "DNS_A_QUERY" -> "IPv4 lookup"
+        "DNS_AAAA_QUERY" -> "IPv6 lookup"
+        "DNS_CNAME_QUERY" -> "Alias lookup"
+        "DNS_MX_QUERY" -> "Mail lookup"
+        else -> "DNS lookup"
     }
 
     private fun activityLabelFor(recentCount: Int): String = when {
