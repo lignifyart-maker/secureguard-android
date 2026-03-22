@@ -391,6 +391,11 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            Text(
+                text = "This is a gentle preview of recent VPN and DNS events, not a raw packet log.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             RiskBadgeText(
                 text = preview.riskLabel,
                 color = connectionFeedAccent(preview.riskLabel)
