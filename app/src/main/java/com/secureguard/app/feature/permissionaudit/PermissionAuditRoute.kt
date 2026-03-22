@@ -594,6 +594,10 @@ private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
+            RiskBadgeText(
+                text = snapshot.crowdLabel,
+                color = wifiAccentColor(snapshot.safetyLevel)
+            )
             Text(
                 text = snapshot.detail,
                 style = MaterialTheme.typography.bodyMedium,
@@ -628,6 +632,17 @@ private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+            ) {
+                Text(
+                    text = snapshot.sensitiveActionAdvice,
+                    modifier = Modifier.padding(14.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
             if (snapshot.permissionLimited) {
                 Text(
                     text = "Tip: allow location later if you want more detailed Wi-Fi identification.",

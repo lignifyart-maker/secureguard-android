@@ -35,13 +35,15 @@ class WifiSecurityInspector @Inject constructor(
                 networkName = "Not on Wi-Fi",
                 securityLabel = "Cellular or offline",
                 safetyLevel = WifiSafetyLevel.Safe,
+                crowdLabel = "Not a shared Wi-Fi right now",
                 summary = "You are not currently on Wi-Fi.",
                 detail = "Public Wi-Fi risks are lower right now because your phone is not using a Wi-Fi network.",
                 gatewayAddress = null,
                 localAddress = null,
                 permissionLimited = false,
                 nearbyDeviceCount = 0,
-                nearbyDeviceSummary = "No Wi-Fi neighbors to inspect right now."
+                nearbyDeviceSummary = "No Wi-Fi neighbors to inspect right now.",
+                sensitiveActionAdvice = "Sensitive actions are usually safer on cellular than open public Wi-Fi."
             )
         }
 
@@ -63,6 +65,11 @@ class WifiSecurityInspector @Inject constructor(
             gatewayAddress = gatewayAddress,
             localAddress = localAddress
         )
+        val crowdLabel = when {
+            localNetworkSnapshot.visibleDeviceCount <= 3 -> "Feels like a smaller private network"
+            localNetworkSnapshot.visibleDeviceCount <= 7 -> "Looks like a lightly shared Wi-Fi"
+            else -> "Looks like a shared or busy Wi-Fi"
+        }
 
         val safetyLevel = when (securityLabel) {
             "Open network" -> WifiSafetyLevel.Risky
@@ -84,8 +91,21 @@ class WifiSecurityInspector @Inject constructor(
                 "Open Wi-Fi can make it easier for nearby attackers to observe or tamper with traffic from weaker apps."
             securityLabel == "Unknown security" ->
                 "Android did not expose the current Wi-Fi protection type clearly on this device, so treat unfamiliar networks carefully."
+            localNetworkSnapshot.visibleDeviceCount >= 8 ->
+                "A busier Wi-Fi is normal in cafes, offices, and shared places, but it is a good reason to be more careful with sensitive actions."
             else ->
                 "This does not guarantee nobody is snooping, but it is a better sign than an open hotspot."
+        }
+
+        val sensitiveActionAdvice = when {
+            securityLabel == "Open network" ->
+                "Skip banking, password changes, and other sensitive logins on this network if you can."
+            localNetworkSnapshot.visibleDeviceCount >= 8 ->
+                "This looks like a shared Wi-Fi, so keep sensitive actions brief or wait for a more trusted connection."
+            localNetworkSnapshot.visibleDeviceCount <= 3 ->
+                "This looks calmer than a public hotspot, though it is still smart to use apps with HTTPS and trusted logins."
+            else ->
+                "This network seems reasonably normal, but still be cautious with unfamiliar websites and login prompts."
         }
 
         WifiSecuritySnapshot(
@@ -93,13 +113,15 @@ class WifiSecurityInspector @Inject constructor(
             networkName = networkName,
             securityLabel = securityLabel,
             safetyLevel = safetyLevel,
+            crowdLabel = crowdLabel,
             summary = summary,
             detail = detail,
             gatewayAddress = gatewayAddress,
             localAddress = localAddress,
             permissionLimited = !hasLocationPermission,
             nearbyDeviceCount = localNetworkSnapshot.visibleDeviceCount,
-            nearbyDeviceSummary = localNetworkSnapshot.summary
+            nearbyDeviceSummary = localNetworkSnapshot.summary,
+            sensitiveActionAdvice = sensitiveActionAdvice
         )
     }
 

@@ -16,13 +16,15 @@ data class PermissionAuditUiState(
         networkName = "Checking network...",
         securityLabel = "Unknown",
         safetyLevel = WifiSafetyLevel.Unknown,
+        crowdLabel = "Checking whether this Wi-Fi feels shared...",
         summary = "SecureGuard is preparing your network check.",
         detail = "This overview will show whether your current Wi-Fi looks open or protected.",
         gatewayAddress = null,
         localAddress = null,
         permissionLimited = false,
         nearbyDeviceCount = 0,
-        nearbyDeviceSummary = "Nearby device visibility is still loading."
+        nearbyDeviceSummary = "Nearby device visibility is still loading.",
+        sensitiveActionAdvice = "A simple recommendation about sensitive actions will appear here after the scan."
     ),
     val securityOverview: SecurityOverview = SecurityOverview(
         score = 72,
