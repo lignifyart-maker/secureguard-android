@@ -8,6 +8,7 @@ data class NetworkEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val packageName: String?,
     val appName: String?,
+    val attributionLabel: String?,
     val host: String?,
     val ipAddress: String?,
     val protocol: String,

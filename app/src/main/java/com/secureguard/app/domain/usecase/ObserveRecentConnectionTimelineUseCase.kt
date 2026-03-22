@@ -17,13 +17,24 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
                 items = events.map { event ->
                     RecentConnectionItem(
                         title = event.host ?: event.ipAddress ?: "Unknown target",
-                        sourceLabel = event.appName ?: "Unknown app",
+                        sourceLabel = buildSourceLabel(
+                            appName = event.appName ?: "Unknown app",
+                            attributionLabel = event.attributionLabel
+                        ),
                         riskLabel = event.riskLabel,
                         eventLabel = eventLabelFor(event.eventType),
                         relativeTime = relativeTimeFrom(event.createdAt)
                     )
                 }
             )
+        }
+    }
+
+    private fun buildSourceLabel(appName: String, attributionLabel: String?): String {
+        return when {
+            attributionLabel.isNullOrBlank() -> appName
+            appName == "Unknown app" -> "$appName / $attributionLabel"
+            else -> "$appName / $attributionLabel"
         }
     }
 

@@ -143,6 +143,7 @@ class LocalVpnService : VpnService() {
                 NetworkEventEntity(
                     packageName = null,
                     appName = "SecureGuard",
+                    attributionLabel = "SecureGuard service event",
                     host = host,
                     ipAddress = null,
                     protocol = protocol,
@@ -209,6 +210,7 @@ class LocalVpnService : VpnService() {
                     NetworkEventEntity(
                         packageName = attribution.packageName,
                         appName = attribution.appName,
+                        attributionLabel = attribution.confidenceLabel,
                         host = dnsQuestion.host,
                         ipAddress = ipv4Packet.destinationIp,
                         protocol = "UDP/53",

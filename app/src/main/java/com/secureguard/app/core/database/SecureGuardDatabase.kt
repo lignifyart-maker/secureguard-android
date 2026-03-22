@@ -10,7 +10,7 @@ import com.secureguard.app.core.database.entity.NetworkEventEntity
 
 @Database(
     entities = [AppScanEntity::class, NetworkEventEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
