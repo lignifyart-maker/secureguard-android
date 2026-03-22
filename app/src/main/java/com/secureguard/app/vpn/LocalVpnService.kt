@@ -199,11 +199,12 @@ class LocalVpnService : VpnService() {
                 }
                 lastLoggedDnsHost = dnsQuestion.host
                 lastLoggedDnsAt = now
+                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
                 val attribution = connectionOwnerResolver.resolveUdpOwner(
-                    sourceIp = ipv4Packet.sourceIp,
-                    sourcePort = udpDatagram.sourcePort,
-                    destinationIp = ipv4Packet.destinationIp,
-                    destinationPort = udpDatagram.destinationPort
+                    localIp = if (isOutgoingDnsQuery) ipv4Packet.sourceIp else ipv4Packet.destinationIp,
+                    localPort = if (isOutgoingDnsQuery) udpDatagram.sourcePort else udpDatagram.destinationPort,
+                    remoteIp = if (isOutgoingDnsQuery) ipv4Packet.destinationIp else ipv4Packet.sourceIp,
+                    remotePort = if (isOutgoingDnsQuery) udpDatagram.destinationPort else udpDatagram.sourcePort
                 )
 
                 networkEventDao.insert(

@@ -21,13 +21,23 @@ class ConnectionOwnerResolver @Inject constructor(
         get() = context.packageManager
 
     fun resolveUdpOwner(
-        sourceIp: String,
-        sourcePort: Int,
-        destinationIp: String,
-        destinationPort: Int
+        localIp: String,
+        localPort: Int,
+        remoteIp: String,
+        remotePort: Int
     ): AppAttribution {
-        val local = InetSocketAddress(InetAddress.getByName(sourceIp), sourcePort)
-        val remote = InetSocketAddress(InetAddress.getByName(destinationIp), destinationPort)
+        val localAddress = runCatching { InetAddress.getByName(localIp) }.getOrNull()
+        val remoteAddress = runCatching { InetAddress.getByName(remoteIp) }.getOrNull()
+        if (localAddress == null || remoteAddress == null) {
+            return AppAttribution(
+                packageName = null,
+                appName = "Unknown app",
+                confidenceLabel = "Address parse failed"
+            )
+        }
+
+        val local = InetSocketAddress(localAddress, localPort)
+        val remote = InetSocketAddress(remoteAddress, remotePort)
         val uid = runCatching {
             connectivityManager.getConnectionOwnerUid(OsConstants.IPPROTO_UDP, local, remote)
         }.getOrDefault(Process.INVALID_UID)
@@ -41,9 +51,16 @@ class ConnectionOwnerResolver @Inject constructor(
         }
 
         val packageName = packageManager.getPackagesForUid(uid)?.firstOrNull()
+        if (packageName == null) {
+            return AppAttribution(
+                packageName = null,
+                appName = "UID $uid",
+                confidenceLabel = "UID resolved without package"
+            )
+        }
+
         val appName = packageName
-            ?.let { safeAppLabel(it) }
-            ?: "UID $uid"
+            .let { safeAppLabel(it) }
 
         return AppAttribution(
             packageName = packageName,
