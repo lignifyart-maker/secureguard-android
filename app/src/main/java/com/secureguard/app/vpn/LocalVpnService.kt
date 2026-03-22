@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.Build
@@ -14,18 +16,24 @@ import dagger.hilt.android.EntryPointAccessors
 import com.secureguard.app.MainActivity
 import com.secureguard.app.core.database.entity.NetworkEventEntity
 import com.secureguard.app.core.di.NetworkEventEntryPoint
+import com.secureguard.app.core.di.VpnRuntimeEntryPoint
 import com.secureguard.app.domain.model.VpnProtectionState
+import java.io.FileInputStream
+import java.net.Inet4Address
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class LocalVpnService : VpnService() {
     private var tunnelInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var readLoopJob: Job? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -36,6 +44,7 @@ class LocalVpnService : VpnService() {
     }
 
     override fun onDestroy() {
+        readLoopJob?.cancel()
         tunnelInterface?.close()
         tunnelInterface = null
         serviceScope.cancel()
@@ -58,15 +67,15 @@ class LocalVpnService : VpnService() {
         _statusMessage.value = "Preparing local VPN protection on this device."
 
         runCatching {
-            Builder()
+            val builder = Builder()
                 .setSession("SecureGuard Local Protection")
                 .addAddress("10.42.0.2", 32)
-                .addDnsServer("1.1.1.1")
-                .addRoute("0.0.0.0", 0)
-                .establish()
+            addDnsRoutes(builder)
+            builder.establish()
         }.onSuccess { parcelFileDescriptor ->
             if (parcelFileDescriptor != null) {
                 tunnelInterface = parcelFileDescriptor
+                startReadLoop(parcelFileDescriptor)
                 _serviceState.value = VpnProtectionState.On
                 _statusMessage.value = "Protection mode is on. Traffic monitoring features can build on this tunnel."
                 logNetworkEvent(
@@ -101,6 +110,8 @@ class LocalVpnService : VpnService() {
     }
 
     private fun stopProtection() {
+        readLoopJob?.cancel()
+        readLoopJob = null
         tunnelInterface?.close()
         tunnelInterface = null
         logNetworkEvent(
@@ -117,7 +128,8 @@ class LocalVpnService : VpnService() {
     private fun logNetworkEvent(
         eventType: String,
         riskLabel: String,
-        host: String
+        host: String,
+        protocol: String = "VPN"
     ) {
         val entryPoint = EntryPointAccessors.fromApplication(
             applicationContext,
@@ -130,13 +142,76 @@ class LocalVpnService : VpnService() {
                     appName = "SecureGuard",
                     host = host,
                     ipAddress = null,
-                    protocol = "VPN",
+                    protocol = protocol,
                     eventType = eventType,
                     riskLabel = riskLabel,
                     createdAt = System.currentTimeMillis()
                 )
             )
         }
+    }
+
+    private fun startReadLoop(parcelFileDescriptor: ParcelFileDescriptor) {
+        readLoopJob?.cancel()
+        readLoopJob = serviceScope.launch {
+            val inputStream = FileInputStream(parcelFileDescriptor.fileDescriptor)
+            val runtimeEntryPoint = EntryPointAccessors.fromApplication(
+                applicationContext,
+                VpnRuntimeEntryPoint::class.java
+            )
+            val ipv4Parser = runtimeEntryPoint.ipv4PacketParser()
+            val udpParser = runtimeEntryPoint.udpDatagramParser()
+            val dnsParser = runtimeEntryPoint.dnsPacketParser()
+            val networkEventDao = runtimeEntryPoint.networkEventDao()
+            val buffer = ByteArray(32767)
+
+            while (isActive) {
+                val count = inputStream.read(buffer)
+                if (count <= 0) continue
+
+                val ipv4Packet = ipv4Parser.parse(buffer, count) ?: continue
+                if (ipv4Packet.protocolNumber != 17) continue
+
+                val udpDatagram = udpParser.parse(
+                    buffer = buffer,
+                    offset = ipv4Packet.payloadOffset,
+                    availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
+                ) ?: continue
+
+                val isDnsTraffic = udpDatagram.sourcePort == 53 || udpDatagram.destinationPort == 53
+                if (!isDnsTraffic) continue
+
+                val dnsQuestion = dnsParser.parseQuestion(
+                    buffer = buffer,
+                    offset = udpDatagram.payloadOffset,
+                    length = udpDatagram.payloadLength
+                ) ?: continue
+
+                networkEventDao.insert(
+                    NetworkEventEntity(
+                        packageName = null,
+                        appName = "Unknown app",
+                        host = dnsQuestion.host,
+                        ipAddress = ipv4Packet.destinationIp,
+                        protocol = "UDP/53",
+                        eventType = "DNS_QUERY",
+                        riskLabel = "Observed",
+                        createdAt = System.currentTimeMillis()
+                    )
+                )
+            }
+        }
+    }
+
+    private fun addDnsRoutes(builder: Builder) {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val linkProperties: LinkProperties = connectivityManager.getLinkProperties(connectivityManager.activeNetwork)
+            ?: return
+        linkProperties.dnsServers
+            .filterIsInstance<Inet4Address>()
+            .forEach { dnsServer ->
+                builder.addRoute(dnsServer.hostAddress ?: return@forEach, 32)
+            }
     }
 
     private fun buildNotification(contentText: String): Notification {
