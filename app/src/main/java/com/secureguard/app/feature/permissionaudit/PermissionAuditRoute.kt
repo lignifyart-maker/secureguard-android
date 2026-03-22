@@ -103,6 +103,8 @@ fun PermissionAuditRoute(
     PermissionAuditScreen(
         state = uiState,
         onOpenAppActions = { selectedApp = it },
+        onCheckForUpdate = viewModel::checkForUpdate,
+        onDismissUpdateStatus = viewModel::dismissUpdateStatus,
         onRefresh = viewModel::refresh,
         onClearRecentActivity = viewModel::clearRecentActivity,
         onToggleRecentActivityExpanded = viewModel::toggleRecentActivityExpanded,
@@ -143,6 +145,16 @@ fun PermissionAuditRoute(
             onUninstall = {
                 selectedApp = null
                 uninstallLauncher.launch(uninstallIntent(app.packageName))
+            }
+        )
+    }
+    uiState.availableUpdate?.let { update ->
+        UpdateAvailableDialog(
+            update = update,
+            onDismiss = viewModel::dismissUpdateStatus,
+            onDownload = {
+                viewModel.dismissUpdateStatus()
+                openBrowser(context, update.releaseUrl)
             }
         )
     }
@@ -192,6 +204,8 @@ private fun VpnDisclosureDialog(
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
     onOpenAppActions: (AppScanResult) -> Unit,
+    onCheckForUpdate: () -> Unit,
+    onDismissUpdateStatus: () -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
@@ -221,7 +235,7 @@ private fun PermissionAuditScreen(
                 },
                 title = {
                     Text(
-                        text = if (state.isRecentActivityHistoryOpen) "全部動態" else "SecureGuard",
+                        text = if (state.isRecentActivityHistoryOpen) "全部動態" else "手機史萊姆",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -244,6 +258,8 @@ private fun PermissionAuditScreen(
             else -> AuditContent(
                 state = state,
                 innerPadding = innerPadding,
+                onCheckForUpdate = onCheckForUpdate,
+                onDismissUpdateStatus = onDismissUpdateStatus,
                 onRefresh = onRefresh,
                 onOpenAppActions = onOpenAppActions,
                 onClearRecentActivity = onClearRecentActivity,
@@ -328,6 +344,8 @@ private fun ErrorState(
 private fun AuditContent(
     state: PermissionAuditUiState,
     innerPadding: PaddingValues,
+    onCheckForUpdate: () -> Unit,
+    onDismissUpdateStatus: () -> Unit,
     onOpenAppActions: (AppScanResult) -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
@@ -373,7 +391,11 @@ private fun AuditContent(
                 noteworthyCount = noteworthyApps.size,
                 oversizedCount = oversizedApps.size,
                 staleCount = staleApps.size,
+                isCheckingForUpdate = state.isCheckingForUpdate,
+                updateStatusMessage = state.updateStatusMessage,
                 lastScanLabel = state.lastScanLabel,
+                onCheckForUpdate = onCheckForUpdate,
+                onDismissUpdateStatus = onDismissUpdateStatus,
                 onRefresh = onRefresh
             )
         }
@@ -424,7 +446,11 @@ private fun HomeSummaryCard(
     noteworthyCount: Int,
     oversizedCount: Int,
     staleCount: Int,
+    isCheckingForUpdate: Boolean,
+    updateStatusMessage: String?,
     lastScanLabel: String,
+    onCheckForUpdate: () -> Unit,
+    onDismissUpdateStatus: () -> Unit,
     onRefresh: () -> Unit
 ) {
     Card(
@@ -478,15 +504,42 @@ private fun HomeSummaryCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
             )
-            Button(
-                onClick = onRefresh,
-                shape = RoundedCornerShape(22.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD37D),
-                    contentColor = Color(0xFF5E4300)
-                )
-            ) {
-                Text("重新整理")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = onRefresh,
+                    shape = RoundedCornerShape(22.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFD37D),
+                        contentColor = Color(0xFF5E4300)
+                    )
+                ) {
+                    Text("重新整理")
+                }
+                Button(
+                    onClick = onCheckForUpdate,
+                    enabled = !isCheckingForUpdate,
+                    shape = RoundedCornerShape(22.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFC7F2D0),
+                        contentColor = Color(0xFF1E6B35)
+                    )
+                ) {
+                    Text(if (isCheckingForUpdate) "檢查中…" else "檢查更新")
+                }
+            }
+            if (updateStatusMessage != null) {
+                Surface(
+                    onClick = onDismissUpdateStatus,
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+                ) {
+                    Text(
+                        text = updateStatusMessage,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
@@ -738,6 +791,51 @@ private fun AppActionDialog(
                 ) {
                     Text("先等等")
                 }
+            }
+        }
+    )
+}
+
+@Composable
+private fun UpdateAvailableDialog(
+    update: AvailableUpdate,
+    onDismiss: () -> Unit,
+    onDownload: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("有新版可以下載")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${update.releaseTitle} 已經上線。")
+                Text(
+                    text = "新版：${update.versionLabel}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDownload,
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7DDA8B))
+            ) {
+                Text("去下載")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFF2D9C7),
+                    contentColor = Color(0xFF7A4E35)
+                )
+            ) {
+                Text("先不用")
             }
         }
     )
@@ -2087,6 +2185,13 @@ private fun uninstallIntent(packageName: String): Intent {
 
 private fun openUsageAccessSettings(context: Context) {
     val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
+private fun openBrowser(context: Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)

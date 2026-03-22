@@ -13,6 +13,9 @@ data class PermissionAuditUiState(
     val isLoading: Boolean = true,
     val apps: List<AppScanResult> = emptyList(),
     val errorMessage: String? = null,
+    val isCheckingForUpdate: Boolean = false,
+    val updateStatusMessage: String? = null,
+    val availableUpdate: AvailableUpdate? = null,
     val lastScanLabel: String = "從未",
     val trustedWifiNetworks: List<String> = emptyList(),
     val showVpnDisclosure: Boolean = false,
@@ -80,4 +83,10 @@ data class PermissionAuditUiState(
         watchApps = emptyList(),
         closeCandidates = emptyList()
     )
+)
+
+data class AvailableUpdate(
+    val versionLabel: String,
+    val releaseTitle: String,
+    val releaseUrl: String
 )

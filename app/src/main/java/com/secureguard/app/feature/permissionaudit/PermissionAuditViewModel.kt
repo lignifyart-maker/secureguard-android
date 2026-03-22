@@ -2,6 +2,7 @@ package com.secureguard.app.feature.permissionaudit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.secureguard.app.BuildConfig
 import com.secureguard.app.core.datastore.SettingsDataStore
 import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
 import com.secureguard.app.domain.usecase.ClearNetworkEventsUseCase
@@ -12,17 +13,21 @@ import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
 import com.secureguard.app.domain.model.VpnProtectionState
 import com.secureguard.app.vpn.LocalVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.DateFormat
 import java.util.Date
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 @HiltViewModel
 class PermissionAuditViewModel @Inject constructor(
@@ -168,6 +173,74 @@ class PermissionAuditViewModel @Inject constructor(
         }
     }
 
+    fun checkForUpdate() {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (_uiState.value.isCheckingForUpdate) return@launch
+            _uiState.update {
+                it.copy(
+                    isCheckingForUpdate = true,
+                    updateStatusMessage = null,
+                    availableUpdate = null
+                )
+            }
+            runCatching {
+                val connection = URL(LATEST_RELEASE_API_URL).openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                connection.inputStream.bufferedReader().use { it.readText() }
+            }
+                .map { body ->
+                    val json = JSONObject(body)
+                    val tag = json.optString("tag_name").ifBlank { json.optString("name") }
+                    val releaseUrl = json.optString("html_url")
+                    val releaseTitle = json.optString("name").ifBlank { tag }
+                    Triple(tag, releaseTitle, releaseUrl)
+                }
+                .onSuccess { (tag, title, url) ->
+                    val latestVersion = tag.removePrefix("v")
+                    val hasUpdate = latestVersion.isNotBlank() &&
+                        latestVersion != BuildConfig.VERSION_NAME &&
+                        url.isNotBlank()
+                    _uiState.update {
+                        it.copy(
+                            isCheckingForUpdate = false,
+                            updateStatusMessage = if (hasUpdate) {
+                                "找到新版 $latestVersion"
+                            } else {
+                                "目前已經是最新版"
+                            },
+                            availableUpdate = if (hasUpdate) {
+                                AvailableUpdate(
+                                    versionLabel = latestVersion,
+                                    releaseTitle = title,
+                                    releaseUrl = url
+                                )
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            isCheckingForUpdate = false,
+                            updateStatusMessage = "現在還查不到新版本，等一下再試一次。"
+                        )
+                    }
+                }
+        }
+    }
+
+    fun dismissUpdateStatus() {
+        _uiState.update { current ->
+            current.copy(updateStatusMessage = null, availableUpdate = null)
+        }
+    }
+
     private fun observeLastScan() {
         viewModelScope.launch {
             settingsDataStore.lastScanTimestamp.collect { timestamp ->
@@ -250,5 +323,10 @@ class PermissionAuditViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val LATEST_RELEASE_API_URL =
+            "https://api.github.com/repos/lignifyart-maker/secureguard-android/releases/latest"
     }
 }
