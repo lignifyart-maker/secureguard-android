@@ -837,6 +837,11 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                        Text(
+                            text = app.riskReasons.joinToString(separator = " / "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
