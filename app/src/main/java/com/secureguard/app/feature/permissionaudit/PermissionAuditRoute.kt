@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -74,6 +75,9 @@ fun PermissionAuditRoute(
         },
         onTrustNetwork = { trusted ->
             viewModel.setWifiTrusted(trusted)
+        },
+        onRemoveTrustedNetwork = { ssid ->
+            viewModel.removeTrustedWifi(ssid)
         }
     )
 }
@@ -84,7 +88,8 @@ private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
     onRefresh: () -> Unit,
     onRequestWifiPermission: () -> Unit,
-    onTrustNetwork: (Boolean) -> Unit
+    onTrustNetwork: (Boolean) -> Unit,
+    onRemoveTrustedNetwork: (String) -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -117,7 +122,8 @@ private fun PermissionAuditScreen(
                 innerPadding = innerPadding,
                 onRefresh = onRefresh,
                 onRequestWifiPermission = onRequestWifiPermission,
-                onTrustNetwork = onTrustNetwork
+                onTrustNetwork = onTrustNetwork,
+                onRemoveTrustedNetwork = onRemoveTrustedNetwork
             )
         }
     }
@@ -183,7 +189,8 @@ private fun AuditContent(
     innerPadding: PaddingValues,
     onRefresh: () -> Unit,
     onRequestWifiPermission: () -> Unit,
-    onTrustNetwork: (Boolean) -> Unit
+    onTrustNetwork: (Boolean) -> Unit,
+    onRemoveTrustedNetwork: (String) -> Unit
 ) {
     val criticalApps = state.apps.count { it.riskLevel == RiskLevel.Critical }
     val highApps = state.apps.count { it.riskLevel == RiskLevel.High }
@@ -247,8 +254,10 @@ private fun AuditContent(
         item {
             WifiSafetyCard(
                 snapshot = state.wifiSnapshot,
+                trustedNetworks = state.trustedWifiNetworks,
                 onRequestWifiPermission = onRequestWifiPermission,
-                onTrustNetwork = onTrustNetwork
+                onTrustNetwork = onTrustNetwork,
+                onRemoveTrustedNetwork = onRemoveTrustedNetwork
             )
         }
 
@@ -610,8 +619,10 @@ private fun SuggestionRow(suggestion: SecuritySuggestion) {
 @Composable
 private fun WifiSafetyCard(
     snapshot: WifiSecuritySnapshot,
+    trustedNetworks: List<String>,
     onRequestWifiPermission: () -> Unit,
-    onTrustNetwork: (Boolean) -> Unit
+    onTrustNetwork: (Boolean) -> Unit,
+    onRemoveTrustedNetwork: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -701,6 +712,36 @@ private fun WifiSafetyCard(
                     )
                 }
             }
+            if (trustedNetworks.isNotEmpty()) {
+                Text(
+                    text = "Saved trusted Wi-Fi",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                trustedNetworks.forEach { trustedSsid ->
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = trustedSsid,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            TextButtonLike(
+                                text = "Remove",
+                                onClick = { onRemoveTrustedNetwork(trustedSsid) }
+                            )
+                        }
+                    }
+                }
+            }
             snapshot.gatewayAddress?.let {
                 Text(
                     text = "Gateway: $it",
@@ -747,6 +788,26 @@ private fun WifiSafetyCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TextButtonLike(
+    text: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        modifier = Modifier.wrapContentWidth()
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge
+        )
     }
 }
 

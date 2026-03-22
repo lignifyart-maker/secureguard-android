@@ -29,6 +29,7 @@ class PermissionAuditViewModel @Inject constructor(
 
     init {
         observeLastScan()
+        observeTrustedWifiNetworks()
         refresh()
     }
 
@@ -76,6 +77,13 @@ class PermissionAuditViewModel @Inject constructor(
         }
     }
 
+    fun removeTrustedWifi(ssid: String) {
+        viewModelScope.launch {
+            settingsDataStore.setWifiTrusted(ssid, false)
+            refresh()
+        }
+    }
+
     private fun observeLastScan() {
         viewModelScope.launch {
             settingsDataStore.lastScanTimestamp.collect { timestamp ->
@@ -86,6 +94,18 @@ class PermissionAuditViewModel @Inject constructor(
                     ).format(Date(it))
                 } ?: "Never"
                 _uiState.update { it.copy(lastScanLabel = label) }
+            }
+        }
+    }
+
+    private fun observeTrustedWifiNetworks() {
+        viewModelScope.launch {
+            settingsDataStore.trustedWifiNetworks.collect { networks ->
+                _uiState.update { current ->
+                    current.copy(
+                        trustedWifiNetworks = networks.sorted()
+                    )
+                }
             }
         }
     }

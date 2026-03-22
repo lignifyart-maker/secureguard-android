@@ -11,6 +11,7 @@ data class PermissionAuditUiState(
     val apps: List<AppScanResult> = emptyList(),
     val errorMessage: String? = null,
     val lastScanLabel: String = "Never",
+    val trustedWifiNetworks: List<String> = emptyList(),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
         networkName = "Checking network...",
