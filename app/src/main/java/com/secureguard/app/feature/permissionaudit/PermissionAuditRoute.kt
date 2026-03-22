@@ -507,11 +507,17 @@ private fun RecentActivityCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (timeline.items.isEmpty()) {
-                Text(
-                    text = "Turn on protection mode to start filling in this recent activity list.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                ) {
+                    Text(
+                        text = "Turn on protection mode to start filling in this recent activity list.",
+                        modifier = Modifier.padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
             timeline.items.take(3).forEach { item ->
                 Surface(
