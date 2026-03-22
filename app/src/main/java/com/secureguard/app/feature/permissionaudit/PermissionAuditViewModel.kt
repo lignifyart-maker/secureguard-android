@@ -118,7 +118,12 @@ class PermissionAuditViewModel @Inject constructor(
             settingsDataStore.trustedWifiNetworks.collect { networks ->
                 _uiState.update { current ->
                     current.copy(
-                        trustedWifiNetworks = networks.sorted()
+                        trustedWifiNetworks = networks.sorted(),
+                        vpnCapabilityNote = if (networks.isEmpty()) {
+                            "Current protection mode can observe DNS tunnel events and service state. Per-app attribution and full flow handling are still being built."
+                        } else {
+                            "Current protection mode can observe DNS tunnel events and service state. Trusted Wi-Fi management is active for ${networks.size} saved network(s)."
+                        }
                     )
                 }
             }
