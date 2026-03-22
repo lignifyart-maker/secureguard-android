@@ -79,6 +79,12 @@
 - Tightened protection-mode language so it feels more product-like and less like internal tooling copy.
 - Clarified that the live feed is a plain-language traffic view rather than a packet log.
 
+## Recent History Screen Round
+
+- Added a dedicated recent-activity history screen instead of relying only on the dashboard panel.
+- Wired the top app bar into a back path so users can move between dashboard and history cleanly.
+- Reused the recent-activity item card layout across the dashboard preview and the full history screen.
+
 ## Current State
 
 - `assembleDebug` passes.

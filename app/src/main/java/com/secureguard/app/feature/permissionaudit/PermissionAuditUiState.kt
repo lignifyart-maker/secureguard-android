@@ -39,6 +39,7 @@ data class PermissionAuditUiState(
     val isClearingRecentActivity: Boolean = false,
     val recentActivityStatusMessage: String? = null,
     val isRecentActivityExpanded: Boolean = false,
+    val isRecentActivityHistoryOpen: Boolean = false,
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
         networkName = "Checking network...",

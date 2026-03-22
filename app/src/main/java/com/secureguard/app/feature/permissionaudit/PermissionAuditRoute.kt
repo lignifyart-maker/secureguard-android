@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Mic
@@ -91,6 +92,8 @@ fun PermissionAuditRoute(
         onRefresh = viewModel::refresh,
         onClearRecentActivity = viewModel::clearRecentActivity,
         onToggleRecentActivityExpanded = viewModel::toggleRecentActivityExpanded,
+        onOpenRecentActivityHistory = viewModel::openRecentActivityHistory,
+        onCloseRecentActivityHistory = viewModel::closeRecentActivityHistory,
         onRequestWifiPermission = {
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         },
@@ -157,6 +160,8 @@ private fun PermissionAuditScreen(
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
+    onOpenRecentActivityHistory: () -> Unit,
+    onCloseRecentActivityHistory: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -169,9 +174,23 @@ private fun PermissionAuditScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    if (state.isRecentActivityHistoryOpen) {
+                        IconButton(onClick = onCloseRecentActivityHistory) {
+                            Icon(
+                                Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = "Back to dashboard"
+                            )
+                        }
+                    }
+                },
                 title = {
                     Text(
-                        text = "SecureGuard",
+                        text = if (state.isRecentActivityHistoryOpen) {
+                            "Recent activity history"
+                        } else {
+                            "SecureGuard"
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -197,6 +216,7 @@ private fun PermissionAuditScreen(
                 onRefresh = onRefresh,
                 onClearRecentActivity = onClearRecentActivity,
                 onToggleRecentActivityExpanded = onToggleRecentActivityExpanded,
+                onOpenRecentActivityHistory = onOpenRecentActivityHistory,
                 onRequestWifiPermission = onRequestWifiPermission,
                 onTrustNetwork = onTrustNetwork,
                 onRemoveTrustedNetwork = onRemoveTrustedNetwork,
@@ -275,6 +295,7 @@ private fun AuditContent(
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
+    onOpenRecentActivityHistory: () -> Unit,
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
@@ -285,6 +306,18 @@ private fun AuditContent(
     val criticalApps = state.apps.count { it.riskLevel == RiskLevel.Critical }
     val highApps = state.apps.count { it.riskLevel == RiskLevel.High }
     val notableApps = state.apps.count { it.riskLevel != RiskLevel.Safe }
+
+    if (state.isRecentActivityHistoryOpen) {
+        RecentActivityHistoryScreen(
+            timeline = state.recentConnectionTimeline,
+            vpnState = state.vpnProtectionState,
+            isClearing = state.isClearingRecentActivity,
+            statusMessage = state.recentActivityStatusMessage,
+            innerPadding = innerPadding,
+            onClear = onClearRecentActivity
+        )
+        return
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -333,6 +366,7 @@ private fun AuditContent(
                 isExpanded = state.isRecentActivityExpanded,
                 statusMessage = state.recentActivityStatusMessage,
                 onClear = onClearRecentActivity,
+                onOpenHistory = onOpenRecentActivityHistory,
                 onToggleExpanded = onToggleRecentActivityExpanded
             )
         }
@@ -492,6 +526,7 @@ private fun RecentActivityCard(
     isExpanded: Boolean,
     statusMessage: String?,
     onClear: () -> Unit,
+    onOpenHistory: () -> Unit,
     onToggleExpanded: () -> Unit
 ) {
     val visibleItems = if (isExpanded) timeline.items else timeline.items.take(3)
@@ -519,6 +554,12 @@ private fun RecentActivityCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (timeline.items.isNotEmpty()) {
+                        TextButtonLike(
+                            text = "History",
+                            onClick = onOpenHistory
+                        )
+                    }
                     if (timeline.hasMoreThanPreview) {
                         TextButtonLike(
                             text = if (isExpanded) "Collapse" else "View all",
@@ -597,53 +638,144 @@ private fun RecentActivityCard(
                 }
             }
             visibleItems.forEach { item ->
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                RecentActivityItemCard(item = item)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentActivityHistoryScreen(
+    timeline: RecentConnectionTimeline,
+    vpnState: VpnProtectionState,
+    isClearing: Boolean,
+    statusMessage: String?,
+    innerPadding: PaddingValues,
+    onClear: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding),
+        contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 28.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(28.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = "Full recent activity",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = timeline.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "${timeline.items.size} event(s) currently in local history",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (statusMessage != null) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
                         ) {
-                            RiskBadgeText(
-                                text = item.riskLabel,
-                                color = connectionFeedAccent(item.riskLabel)
-                            )
-                            EventChip(text = item.eventLabel)
-                            RiskBadgeText(
-                                text = item.attributionStateLabel,
-                                color = attributionAccent(item.attributionStateLabel)
+                            Text(
+                                text = statusMessage,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         }
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    }
+                    if (timeline.items.isNotEmpty() || isClearing) {
+                        TextButtonLike(
+                            text = if (isClearing) "Clearing..." else "Clear history",
+                            enabled = !isClearing,
+                            onClick = onClear
+                        )
+                    } else {
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                        ) {
                             Text(
-                                text = item.sourceLabel,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                            Text(
-                                text = item.attributionLabel,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = item.relativeTime,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
+                                    "Protection is on. As new DNS and UDP traffic appears, it will build up here."
+                                } else {
+                                    "Turn on local protection and use a few apps to start building recent history."
+                                },
+                                modifier = Modifier.padding(16.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
                 }
+            }
+        }
+
+        items(timeline.items) { item ->
+            RecentActivityItemCard(item = item)
+        }
+    }
+}
+
+@Composable
+private fun RecentActivityItemCard(item: com.secureguard.app.domain.model.RecentConnectionItem) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RiskBadgeText(
+                    text = item.riskLabel,
+                    color = connectionFeedAccent(item.riskLabel)
+                )
+                EventChip(text = item.eventLabel)
+                RiskBadgeText(
+                    text = item.attributionStateLabel,
+                    color = attributionAccent(item.attributionStateLabel)
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = item.sourceLabel,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Text(
+                    text = item.attributionLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = item.relativeTime,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

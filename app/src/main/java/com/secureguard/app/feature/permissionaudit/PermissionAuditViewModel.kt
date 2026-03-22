@@ -156,6 +156,18 @@ class PermissionAuditViewModel @Inject constructor(
         }
     }
 
+    fun openRecentActivityHistory() {
+        _uiState.update { current ->
+            current.copy(isRecentActivityHistoryOpen = true)
+        }
+    }
+
+    fun closeRecentActivityHistory() {
+        _uiState.update { current ->
+            current.copy(isRecentActivityHistoryOpen = false)
+        }
+    }
+
     private fun observeLastScan() {
         viewModelScope.launch {
             settingsDataStore.lastScanTimestamp.collect { timestamp ->
