@@ -2,6 +2,7 @@ package com.secureguard.app.feature.permissionaudit
 
 import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.ConnectionFeedPreview
+import com.secureguard.app.domain.model.RecentConnectionTimeline
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
 import com.secureguard.app.domain.model.VpnProtectionState
@@ -30,6 +31,9 @@ data class PermissionAuditUiState(
         riskLabel = "Idle",
         relativeTime = "waiting",
         recentCount = 0
+    ),
+    val recentConnectionTimeline: RecentConnectionTimeline = RecentConnectionTimeline(
+        items = emptyList()
     ),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
