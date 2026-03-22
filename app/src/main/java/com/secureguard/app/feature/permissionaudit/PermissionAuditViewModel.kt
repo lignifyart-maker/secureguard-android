@@ -91,6 +91,14 @@ class PermissionAuditViewModel @Inject constructor(
         }
     }
 
+    fun requestProtectionDisclosure() {
+        _uiState.update { it.copy(showVpnDisclosure = true) }
+    }
+
+    fun dismissProtectionDisclosure() {
+        _uiState.update { it.copy(showVpnDisclosure = false) }
+    }
+
     private fun observeLastScan() {
         viewModelScope.launch {
             settingsDataStore.lastScanTimestamp.collect { timestamp ->

@@ -14,6 +14,7 @@ data class PermissionAuditUiState(
     val errorMessage: String? = null,
     val lastScanLabel: String = "Never",
     val trustedWifiNetworks: List<String> = emptyList(),
+    val showVpnDisclosure: Boolean = false,
     val vpnProtectionState: VpnProtectionState = VpnProtectionState.Off,
     val vpnStatusMessage: String = "Protection mode is off. Turn it on when you want local network monitoring.",
     val connectionFeedPreview: ConnectionFeedPreview = ConnectionFeedPreview(

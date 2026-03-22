@@ -38,6 +38,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -97,6 +98,7 @@ fun PermissionAuditRoute(
             viewModel.removeTrustedWifi(ssid)
         },
         onEnableProtection = {
+            viewModel.dismissProtectionDisclosure()
             val intent = VpnService.prepare(context)
             if (intent != null) {
                 vpnPermissionLauncher.launch(intent)
@@ -106,6 +108,41 @@ fun PermissionAuditRoute(
         },
         onDisableProtection = {
             context.startService(LocalVpnService.stopIntent(context))
+        },
+        onShowDisclosure = viewModel::requestProtectionDisclosure,
+        onDismissDisclosure = viewModel::dismissProtectionDisclosure
+    )
+}
+
+@Composable
+private fun VpnDisclosureDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Before protection mode starts")
+        },
+        text = {
+            Text(
+                "SecureGuard uses Android's VpnService only for on-device security analysis. Your traffic stays on this phone and is not uploaded to an outside security server."
+            )
+        },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Continue")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text("Not now")
+            }
         }
     )
 }
@@ -118,6 +155,8 @@ private fun PermissionAuditScreen(
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
+    onShowDisclosure: () -> Unit,
+    onDismissDisclosure: () -> Unit,
     onEnableProtection: () -> Unit,
     onDisableProtection: () -> Unit
 ) {
@@ -154,10 +193,17 @@ private fun PermissionAuditScreen(
                 onRequestWifiPermission = onRequestWifiPermission,
                 onTrustNetwork = onTrustNetwork,
                 onRemoveTrustedNetwork = onRemoveTrustedNetwork,
+                onShowDisclosure = onShowDisclosure,
                 onEnableProtection = onEnableProtection,
                 onDisableProtection = onDisableProtection
             )
         }
+    }
+    if (state.showVpnDisclosure) {
+        VpnDisclosureDialog(
+            onConfirm = onEnableProtection,
+            onDismiss = onDismissDisclosure
+        )
     }
 }
 
@@ -223,6 +269,7 @@ private fun AuditContent(
     onRequestWifiPermission: () -> Unit,
     onTrustNetwork: (Boolean) -> Unit,
     onRemoveTrustedNetwork: (String) -> Unit,
+    onShowDisclosure: () -> Unit,
     onEnableProtection: () -> Unit,
     onDisableProtection: () -> Unit
 ) {
@@ -255,7 +302,7 @@ private fun AuditContent(
             ProtectionModeCard(
                 state = state.vpnProtectionState,
                 statusMessage = state.vpnStatusMessage,
-                onEnableProtection = onEnableProtection,
+                onEnableProtection = onShowDisclosure,
                 onDisableProtection = onDisableProtection
             )
         }
