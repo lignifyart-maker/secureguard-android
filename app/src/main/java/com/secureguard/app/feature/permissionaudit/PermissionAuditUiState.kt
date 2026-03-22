@@ -43,6 +43,7 @@ data class PermissionAuditUiState(
         localAddress = null,
         permissionLimited = false,
         nearbyDeviceCount = 0,
+        nearbyDeviceConfidenceLabel = "Preparing estimate...",
         nearbyDeviceSummary = "Nearby device visibility is still loading.",
         sensitiveActionAdvice = "A simple recommendation about sensitive actions will appear here after the scan."
     ),

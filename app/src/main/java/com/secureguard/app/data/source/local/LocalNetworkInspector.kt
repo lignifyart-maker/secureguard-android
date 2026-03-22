@@ -28,14 +28,16 @@ class LocalNetworkInspector @Inject constructor() {
 
             return@withContext LocalNetworkSnapshot(
                 visibleDeviceCount = estimate,
-                summary = summary
+                summary = summary,
+                confidenceLabel = "Neighbor estimate"
             )
         }
 
         val fallbackCount = if (gatewayAddress != null && localAddress != null) 2 else 1
         LocalNetworkSnapshot(
             visibleDeviceCount = fallbackCount,
-            summary = "SecureGuard could only confirm your phone and gateway, so this is a cautious estimate."
+            summary = "SecureGuard could only confirm your phone and gateway, so this is a cautious estimate.",
+            confidenceLabel = "Limited estimate"
         )
     }
 
@@ -60,7 +62,8 @@ class LocalNetworkInspector @Inject constructor() {
 
 data class LocalNetworkSnapshot(
     val visibleDeviceCount: Int,
-    val summary: String
+    val summary: String,
+    val confidenceLabel: String
 )
 
 private data class ArpEntry(

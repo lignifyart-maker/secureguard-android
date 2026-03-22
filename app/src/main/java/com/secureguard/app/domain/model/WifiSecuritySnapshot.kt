@@ -15,6 +15,7 @@ data class WifiSecuritySnapshot(
     val localAddress: String?,
     val permissionLimited: Boolean,
     val nearbyDeviceCount: Int,
+    val nearbyDeviceConfidenceLabel: String,
     val nearbyDeviceSummary: String,
     val sensitiveActionAdvice: String
 )

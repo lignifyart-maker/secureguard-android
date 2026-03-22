@@ -989,6 +989,11 @@ private fun WifiSafetyCard(
                 fontWeight = FontWeight.Medium
             )
             Text(
+                text = snapshot.nearbyDeviceConfidenceLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
                 text = snapshot.nearbyDeviceSummary,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

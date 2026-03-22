@@ -45,6 +45,7 @@ class WifiSecurityInspector @Inject constructor(
                 localAddress = null,
                 permissionLimited = false,
                 nearbyDeviceCount = 0,
+                nearbyDeviceConfidenceLabel = "No estimate needed",
                 nearbyDeviceSummary = "No Wi-Fi neighbors to inspect right now.",
                 sensitiveActionAdvice = "Sensitive actions are usually safer on cellular than open public Wi-Fi."
             )
@@ -146,6 +147,7 @@ class WifiSecurityInspector @Inject constructor(
             localAddress = localAddress,
             permissionLimited = !hasLocationPermission,
             nearbyDeviceCount = localNetworkSnapshot.visibleDeviceCount,
+            nearbyDeviceConfidenceLabel = localNetworkSnapshot.confidenceLabel,
             nearbyDeviceSummary = localNetworkSnapshot.summary,
             sensitiveActionAdvice = sensitiveActionAdvice
         )
