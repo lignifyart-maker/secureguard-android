@@ -243,6 +243,7 @@ class LocalVpnService : VpnService() {
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle("SecureGuard Protection")
             .setContentText(contentText)
+            .setSubText("Local on-device analysis")
             .setContentIntent(pendingIntent)
             .addAction(0, "Stop", stopIntent)
             .setOngoing(true)
