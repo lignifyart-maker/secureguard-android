@@ -18,11 +18,20 @@
 - Added a summary line for recent activity volume.
 - Added a clear action path for recent network events.
 
+## Follow-up Round
+
+- Stabilized the recent activity card layout so each item renders as a proper stacked row.
+- Added event type labels to recent activity items.
+- Added a recent-activity summary line.
+- Wired the clear action from the dashboard into the screen content path.
+- Kept the branch buildable after the clear-action integration fix.
+
 ## Current State
 
 - `assembleDebug` passes.
 - Recent activity now appears as a dashboard section rather than a single preview string.
 - The UI is still a summary view; it is not yet a full drill-down screen.
+- Recent activity is now a usable dashboard panel, but not yet a dedicated history screen.
 - Per-app attribution is still incomplete. Most VPN-captured activity still shows `Unknown app`.
 
 ## Next Recommended Steps
