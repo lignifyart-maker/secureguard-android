@@ -891,6 +891,11 @@ private fun CloseCandidatesCard(apps: List<AppScanResult>) {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
+                            text = app.riskLevel.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
                             text = app.riskReasons.joinToString(separator = " / "),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
