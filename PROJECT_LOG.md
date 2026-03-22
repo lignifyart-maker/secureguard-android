@@ -32,13 +32,20 @@
 - Polished the empty state into a softer card-style hint instead of plain text.
 - Kept the feature branch buildable and ready to merge back to `main`.
 
+## Attribution Round
+
+- Added an Android owner-lookup resolver for UDP connections inside the VPN runtime path.
+- Wired DNS events through `ConnectivityManager.getConnectionOwnerUid(...)` before logging them.
+- Persisted attribution confidence on `network_events`.
+- Surfaced attribution status in the recent-activity panel.
+
 ## Current State
 
 - `assembleDebug` passes.
 - Recent activity now appears as a dashboard section rather than a single preview string.
 - The UI is still a summary view; it is not yet a full drill-down screen.
 - Recent activity is now a usable dashboard panel, but not yet a dedicated history screen.
-- Per-app attribution is still incomplete. Most VPN-captured activity still shows `Unknown app`.
+- Per-app attribution is now partially wired for DNS events, but it still needs broader validation and better fallback handling.
 
 ## Next Recommended Steps
 
@@ -48,4 +55,4 @@
    - cleaner row spacing
 2. Push the clear action all the way through UX copy and verify it behaves well after repeated toggles.
 3. Add a dedicated recent-activity screen or expanded panel.
-4. Start per-app attribution groundwork for VPN events.
+4. Continue per-app attribution hardening for VPN events and extend beyond the current DNS-first path.
