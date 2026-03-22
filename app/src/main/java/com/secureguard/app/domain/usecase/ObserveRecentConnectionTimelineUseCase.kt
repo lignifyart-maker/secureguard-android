@@ -17,10 +17,21 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
                     RecentConnectionItem(
                         title = event.host ?: event.ipAddress ?: "Unknown target",
                         sourceLabel = event.appName ?: "Unknown app",
-                        riskLabel = event.riskLabel
+                        riskLabel = event.riskLabel,
+                        relativeTime = relativeTimeFrom(event.createdAt)
                     )
                 }
             )
+        }
+    }
+
+    private fun relativeTimeFrom(createdAt: Long): String {
+        val seconds = ((System.currentTimeMillis() - createdAt) / 1000).coerceAtLeast(0)
+        return when {
+            seconds < 5 -> "just now"
+            seconds < 60 -> "${seconds}s ago"
+            seconds < 3600 -> "${seconds / 60}m ago"
+            else -> "${seconds / 3600}h ago"
         }
     }
 }
