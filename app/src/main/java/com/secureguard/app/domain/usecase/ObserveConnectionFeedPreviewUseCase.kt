@@ -21,6 +21,10 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_STARTED" -> "Protection mode started"
                         "VPN_STOPPED" -> "Protection mode stopped"
                         "VPN_ERROR" -> "Protection mode needs attention"
+                        "UDP_QUIC_TRAFFIC" -> "$appName opened encrypted app traffic"
+                        "UDP_NTP_TRAFFIC" -> "$appName checked network time"
+                        "UDP_STUN_TRAFFIC" -> "$appName opened call or peer traffic"
+                        "UDP_APP_TRAFFIC" -> "$appName sent non-DNS UDP traffic"
                         else -> {
                             when (mostRecent.riskLabel) {
                                 "Tracker" -> "A tracking-style domain was contacted"
@@ -33,6 +37,10 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
                         "VPN_STOPPED" -> "Local protection mode was turned off."
                         "VPN_ERROR" -> "SecureGuard could not keep the local tunnel alive."
+                        "UDP_QUIC_TRAFFIC" -> "$appName sent encrypted UDP traffic to $target, which often means QUIC-style app traffic."
+                        "UDP_NTP_TRAFFIC" -> "$appName contacted $target to check or sync time."
+                        "UDP_STUN_TRAFFIC" -> "$appName contacted $target using a port often associated with calling or peer discovery."
+                        "UDP_APP_TRAFFIC" -> "$appName sent non-DNS UDP traffic to $target."
                         else -> when (mostRecent.riskLabel) {
                             "Tracker" -> "$appName asked about $target, which looks like tracking or ad traffic."
                             "Sensitive" -> "$appName checked $target, which touches a more sensitive service."
@@ -122,6 +130,10 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_AAAA_QUERY" -> "asked for an IPv6 address"
         "DNS_CNAME_QUERY" -> "followed a domain alias"
         "DNS_MX_QUERY" -> "looked up mail routing"
+        "UDP_QUIC_TRAFFIC" -> "opened encrypted UDP app traffic"
+        "UDP_NTP_TRAFFIC" -> "checked network time"
+        "UDP_STUN_TRAFFIC" -> "opened call or peer discovery traffic"
+        "UDP_APP_TRAFFIC" -> "generated non-DNS UDP traffic"
         else -> "generated a DNS lookup"
     }
 
@@ -133,7 +145,11 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_AAAA_QUERY" -> "IPv6 lookup"
         "DNS_CNAME_QUERY" -> "Alias lookup"
         "DNS_MX_QUERY" -> "Mail lookup"
-        else -> "DNS lookup"
+        "UDP_QUIC_TRAFFIC" -> "Encrypted UDP"
+        "UDP_NTP_TRAFFIC" -> "Time sync"
+        "UDP_STUN_TRAFFIC" -> "Peer traffic"
+        "UDP_APP_TRAFFIC" -> "UDP traffic"
+        else -> "Observed traffic"
     }
 
     private fun sourceLabelFor(appName: String, attributionLabel: String?): String = when {

@@ -65,13 +65,20 @@
 - Kept the fallback bounded by a small cache and expiry window instead of treating it as a long-term attribution source.
 - Surfaced the recovered attribution state in both the live feed copy and recent-activity badges.
 
+## Non-DNS UDP Round
+
+- Extended the VPN read loop so outgoing UDP traffic is no longer limited to DNS-only logging.
+- Added lightweight non-DNS UDP event classes for encrypted app traffic, time sync traffic, peer/call traffic, and generic UDP traffic.
+- Kept non-DNS logging deduplicated with a short signature window so the feed does not flood immediately.
+- Updated live feed and recent-activity labels so these new UDP events render as meaningful traffic types instead of falling back to DNS wording.
+
 ## Current State
 
 - `assembleDebug` passes.
 - Recent activity now appears as a dashboard section rather than a single preview string.
 - The UI is still a summary view; it is not yet a full drill-down screen.
 - Recent activity is now a usable dashboard panel with an expandable in-place history view, but not yet a dedicated history screen.
-- Per-app attribution is now partially wired for outgoing DNS events, with better fallback handling, short-lived recovery from lookup misses, and clearer dashboard status.
+- Per-app attribution is now partially wired for outgoing DNS events and a first non-DNS UDP path, with better fallback handling, short-lived recovery from lookup misses, and clearer dashboard status.
 
 ## Next Recommended Steps
 

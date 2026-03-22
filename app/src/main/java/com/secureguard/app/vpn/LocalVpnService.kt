@@ -37,6 +37,8 @@ class LocalVpnService : VpnService() {
     private var readLoopJob: Job? = null
     private var lastLoggedDnsHost: String? = null
     private var lastLoggedDnsAt: Long = 0L
+    private var lastLoggedUdpSignature: String? = null
+    private var lastLoggedUdpAt: Long = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -184,43 +186,83 @@ class LocalVpnService : VpnService() {
                     availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
                 ) ?: continue
 
-                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
-                if (!isOutgoingDnsQuery) continue
-
-                val dnsQuestion = dnsParser.parseQuestion(
-                    buffer = buffer,
-                    offset = udpDatagram.payloadOffset,
-                    length = udpDatagram.payloadLength
-                ) ?: continue
-
                 val now = System.currentTimeMillis()
-                if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
-                    continue
-                }
-                lastLoggedDnsHost = dnsQuestion.host
-                lastLoggedDnsAt = now
                 val attribution = connectionOwnerResolver.resolveUdpOwner(
                     localIp = ipv4Packet.sourceIp,
                     localPort = udpDatagram.sourcePort,
                     remoteIp = ipv4Packet.destinationIp,
                     remotePort = udpDatagram.destinationPort
                 )
+                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
+                if (isOutgoingDnsQuery) {
+                    val dnsQuestion = dnsParser.parseQuestion(
+                        buffer = buffer,
+                        offset = udpDatagram.payloadOffset,
+                        length = udpDatagram.payloadLength
+                    ) ?: continue
+
+                    if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
+                        continue
+                    }
+                    lastLoggedDnsHost = dnsQuestion.host
+                    lastLoggedDnsAt = now
+
+                    networkEventDao.insert(
+                        NetworkEventEntity(
+                            packageName = attribution.packageName,
+                            appName = attribution.appName,
+                            attributionLabel = attribution.confidenceLabel,
+                            host = dnsQuestion.host,
+                            ipAddress = ipv4Packet.destinationIp,
+                            protocol = "UDP/53",
+                            eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
+                            riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
+                            createdAt = now
+                        )
+                    )
+                    continue
+                }
+
+                val udpSignature = listOf(
+                    attribution.packageName ?: attribution.appName,
+                    ipv4Packet.destinationIp,
+                    udpDatagram.destinationPort.toString()
+                ).joinToString("|")
+                if (udpSignature == lastLoggedUdpSignature && now - lastLoggedUdpAt < 2000L) {
+                    continue
+                }
+                lastLoggedUdpSignature = udpSignature
+                lastLoggedUdpAt = now
 
                 networkEventDao.insert(
                     NetworkEventEntity(
                         packageName = attribution.packageName,
                         appName = attribution.appName,
                         attributionLabel = attribution.confidenceLabel,
-                        host = dnsQuestion.host,
+                        host = null,
                         ipAddress = ipv4Packet.destinationIp,
-                        protocol = "UDP/53",
-                        eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
-                        riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
+                        protocol = "UDP/${udpDatagram.destinationPort}",
+                        eventType = udpEventTypeFor(udpDatagram.destinationPort),
+                        riskLabel = udpRiskLabelFor(udpDatagram.destinationPort),
                         createdAt = now
                     )
                 )
             }
         }
+    }
+
+    private fun udpEventTypeFor(destinationPort: Int): String = when (destinationPort) {
+        123 -> "UDP_NTP_TRAFFIC"
+        443 -> "UDP_QUIC_TRAFFIC"
+        3478, 3479, 5349, 5350 -> "UDP_STUN_TRAFFIC"
+        else -> "UDP_APP_TRAFFIC"
+    }
+
+    private fun udpRiskLabelFor(destinationPort: Int): String = when (destinationPort) {
+        123 -> "Routine"
+        443 -> "Observed"
+        3478, 3479, 5349, 5350 -> "Observed"
+        else -> "Observed"
     }
 
     private fun addDnsRoutes(builder: Builder) {

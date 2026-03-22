@@ -47,7 +47,11 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
         "DNS_AAAA_QUERY" -> "IPv6 lookup"
         "DNS_CNAME_QUERY" -> "Alias lookup"
         "DNS_MX_QUERY" -> "Mail lookup"
-        else -> "DNS lookup"
+        "UDP_QUIC_TRAFFIC" -> "Encrypted UDP"
+        "UDP_NTP_TRAFFIC" -> "Time sync"
+        "UDP_STUN_TRAFFIC" -> "Peer traffic"
+        "UDP_APP_TRAFFIC" -> "UDP traffic"
+        else -> "Observed traffic"
     }
 
     private fun humanizeAttribution(label: String): String = when (label) {
