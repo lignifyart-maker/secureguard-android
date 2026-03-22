@@ -844,17 +844,17 @@ private fun ProtectionModeCard(
                 shape = RoundedCornerShape(22.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                        Color(0xFFF2A6A0)
+                        Color(0xFFF7B8C8)
                     } else {
-                        Color(0xFFE98F6F)
+                        Color(0xFFFFA981)
                     }
                 )
             ) {
                 Text(
                     if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                        "先停一下"
+                        "先休息一下"
                     } else {
-                        "開始保護"
+                        "開始保護吧"
                     }
                 )
             }
@@ -1141,35 +1141,35 @@ private fun GentleChecklist(apps: List<AppScanResult>) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Simple next steps",
+                text = "接下來看這些",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             ChecklistItem(
                 icon = Icons.Outlined.Mic,
-                label = "Microphone access",
+                label = "麥克風",
                 detail = if (microphoneApps == 0) {
-                    "No scanned apps currently stand out for microphone use."
+                    "目前沒有特別常碰麥克風的 app。"
                 } else {
-                    "$microphoneApps apps asked for microphone access. Review the ones you rarely use."
+                    "有 $microphoneApps 個 app 想用麥克風，先看那些你不常開的。"
                 }
             )
             ChecklistItem(
                 icon = Icons.Outlined.LocationOn,
-                label = "Location access",
+                label = "位置",
                 detail = if (locationApps == 0) {
-                    "Location access looks fairly quiet right now."
+                    "目前位置權限看起來算安靜。"
                 } else {
-                    "$locationApps apps asked for precise location. Keep only the ones you trust."
+                    "有 $locationApps 個 app 想知道你在哪，只留你信任的就好。"
                 }
             )
             ChecklistItem(
                 icon = Icons.Outlined.People,
-                label = "Contacts access",
+                label = "聯絡人",
                 detail = if (contactsApps == 0) {
-                    "No scanned apps are currently raising contact-sharing concerns."
+                    "目前沒有特別碰聯絡人的 app。"
                 } else {
-                    "$contactsApps apps asked to read contacts. Double-check messaging and utility apps first."
+                    "有 $contactsApps 個 app 想讀聯絡人，先看聊天和工具類 app。"
                 }
             )
 
@@ -1180,13 +1180,13 @@ private fun GentleChecklist(apps: List<AppScanResult>) {
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Start here",
+                            text = "先從這個看",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${it.appName} is the strongest candidate for a quick review.",
+                            text = "${it.appName} 最值得你先看一眼。",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -1214,7 +1214,7 @@ private fun SecuritySuggestionCard(overview: SecurityOverview) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Today, keep it simple",
+                text = "今天先看重點",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -1236,12 +1236,12 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Keep an eye on these (${apps.size})",
+                text = "先留意這些 (${apps.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "These apps are not necessarily malicious, but they are the strongest candidates for a closer look first.",
+                text = "它們不一定有問題，只是目前最值得先回頭看。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1549,11 +1549,13 @@ private fun WifiSafetyCard(
             if (snapshot.permissionLimited) {
                 Button(
                     onClick = onRequestWifiPermission,
+                    shape = RoundedCornerShape(22.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
+                        containerColor = Color(0xFFFFA981),
+                        contentColor = Color.White
                     )
                 ) {
-                    Text("允許 Wi‑Fi 詳細資訊")
+                    Text("打開 Wi‑Fi 細節")
                 }
             }
         }
@@ -1571,7 +1573,7 @@ private fun TextButtonLike(
         enabled = enabled,
         shape = RoundedCornerShape(999.dp),
         color = if (enabled) {
-            Color(0xFFFFE8DC)
+            Color(0xFFFFE6EF)
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         },
@@ -1579,9 +1581,9 @@ private fun TextButtonLike(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
             color = if (enabled) {
-                Color(0xFF9C5B3D)
+                Color(0xFF9A4B6A)
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },

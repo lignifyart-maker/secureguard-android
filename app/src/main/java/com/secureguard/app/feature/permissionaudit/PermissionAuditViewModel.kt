@@ -74,7 +74,7 @@ class PermissionAuditViewModel @Inject constructor(
                     _uiState.update { current ->
                         current.copy(
                             isLoading = false,
-                            errorMessage = throwable.message ?: "Scan failed"
+                            errorMessage = throwable.message ?: "這次沒有順利整理好，等一下再試一次。"
                         )
                     }
                 }
@@ -123,9 +123,9 @@ class PermissionAuditViewModel @Inject constructor(
                         it.copy(
                             isClearingRecentActivity = false,
                             recentActivityStatusMessage = if (hadItems) {
-                                "Recent activity cleared."
+                                "剛剛的動態已經幫你清空了。"
                             } else {
-                                "Recent activity is already empty."
+                                "這裡本來就沒有東西。"
                             }
                         )
                     }
@@ -143,7 +143,7 @@ class PermissionAuditViewModel @Inject constructor(
                         it.copy(
                             isClearingRecentActivity = false,
                             recentActivityStatusMessage = throwable.message
-                                ?: "Could not clear recent activity."
+                                ?: "這次沒有清掉，等一下再試一次。"
                         )
                     }
                 }
@@ -189,9 +189,9 @@ class PermissionAuditViewModel @Inject constructor(
                     current.copy(
                         trustedWifiNetworks = networks.sorted(),
                         vpnCapabilityNote = if (networks.isEmpty()) {
-                            "目前的保護模式可以觀察 DNS 通道事件與服務狀態。每個 app 的歸因與更完整的流量處理仍在持續補強中。"
+                            "現在會先幫你看 DNS 和一部分連線動態，也會盡量告訴你是哪個 app 在動。"
                         } else {
-                            "目前的保護模式可以觀察 DNS 通道事件與服務狀態。可信任 Wi‑Fi 管理已啟用，現有 ${networks.size} 個已儲存網路。"
+                            "現在會先幫你看 DNS 和一部分連線動態，已記住 ${networks.size} 個安心 Wi‑Fi。"
                         }
                     )
                 }
