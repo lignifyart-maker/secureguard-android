@@ -436,7 +436,7 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 )
             }
             Text(
-                text = preview.relativeTime,
+                text = "Seen ${preview.relativeTime}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
