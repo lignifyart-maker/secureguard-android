@@ -2,8 +2,12 @@ package com.secureguard.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val GuardNavy = Color(0xFF0F172A)
-val GuardOcean = Color(0xFF0B5FFF)
-val GuardMint = Color(0xFF3AAE9E)
-val GuardSand = Color(0xFFF4E7CC)
-val GuardSurface = Color(0xFFF7F7F5)
+val GuardBlue = Color(0xFF6A9CFD)
+val GuardMint = Color(0xFF7DD8C6)
+val GuardPeach = Color(0xFFFFC8B8)
+val GuardButter = Color(0xFFFFF1B8)
+val GuardLavender = Color(0xFFEAE3FF)
+val GuardCream = Color(0xFFFFFBF7)
+val GuardInk = Color(0xFF27313F)
+val GuardNight = Color(0xFF1F2432)
+val GuardNightSoft = Color(0xFF2C3446)
