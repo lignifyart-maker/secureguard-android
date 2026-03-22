@@ -812,7 +812,7 @@ private fun WatchAppsCard(apps: List<AppScanResult>) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Keep an eye on these",
+                text = "Keep an eye on these (${apps.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
