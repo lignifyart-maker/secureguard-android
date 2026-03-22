@@ -302,6 +302,7 @@ private fun AuditContent(
             ProtectionModeCard(
                 state = state.vpnProtectionState,
                 statusMessage = state.vpnStatusMessage,
+                capabilityNote = state.vpnCapabilityNote,
                 onEnableProtection = onShowDisclosure,
                 onDisableProtection = onDisableProtection
             )
@@ -406,6 +407,7 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
 private fun ProtectionModeCard(
     state: VpnProtectionState,
     statusMessage: String,
+    capabilityNote: String,
     onEnableProtection: () -> Unit,
     onDisableProtection: () -> Unit
 ) {
@@ -434,6 +436,11 @@ private fun ProtectionModeCard(
             Text(
                 text = statusMessage,
                 style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = capabilityNote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Button(
                 onClick = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {

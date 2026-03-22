@@ -17,6 +17,7 @@ data class PermissionAuditUiState(
     val showVpnDisclosure: Boolean = false,
     val vpnProtectionState: VpnProtectionState = VpnProtectionState.Off,
     val vpnStatusMessage: String = "Protection mode is off. Turn it on when you want local network monitoring.",
+    val vpnCapabilityNote: String = "Current protection mode can observe DNS tunnel events and service state. Per-app attribution and full flow handling are still being built.",
     val connectionFeedPreview: ConnectionFeedPreview = ConnectionFeedPreview(
         title = "No live connections yet",
         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
