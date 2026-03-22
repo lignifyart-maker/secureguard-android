@@ -176,7 +176,7 @@ class PermissionAuditViewModel @Inject constructor(
                         DateFormat.MEDIUM,
                         DateFormat.SHORT
                     ).format(Date(it))
-                } ?: "Never"
+                } ?: "從未"
                 _uiState.update { it.copy(lastScanLabel = label) }
             }
         }
@@ -189,9 +189,9 @@ class PermissionAuditViewModel @Inject constructor(
                     current.copy(
                         trustedWifiNetworks = networks.sorted(),
                         vpnCapabilityNote = if (networks.isEmpty()) {
-                            "Current protection mode can observe DNS tunnel events and service state. Per-app attribution and full flow handling are still being built."
+                            "目前的保護模式可以觀察 DNS 通道事件與服務狀態。每個 app 的歸因與更完整的流量處理仍在持續補強中。"
                         } else {
-                            "Current protection mode can observe DNS tunnel events and service state. Trusted Wi-Fi management is active for ${networks.size} saved network(s)."
+                            "目前的保護模式可以觀察 DNS 通道事件與服務狀態。可信任 Wi‑Fi 管理已啟用，現有 ${networks.size} 個已儲存網路。"
                         }
                     )
                 }

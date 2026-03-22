@@ -33,6 +33,33 @@ class ConnectionOwnerResolver @Inject constructor(
         localPort: Int,
         remoteIp: String,
         remotePort: Int
+    ): AppAttribution = resolveOwner(
+        protocol = OsConstants.IPPROTO_UDP,
+        localIp = localIp,
+        localPort = localPort,
+        remoteIp = remoteIp,
+        remotePort = remotePort
+    )
+
+    fun resolveTcpOwner(
+        localIp: String,
+        localPort: Int,
+        remoteIp: String,
+        remotePort: Int
+    ): AppAttribution = resolveOwner(
+        protocol = OsConstants.IPPROTO_TCP,
+        localIp = localIp,
+        localPort = localPort,
+        remoteIp = remoteIp,
+        remotePort = remotePort
+    )
+
+    private fun resolveOwner(
+        protocol: Int,
+        localIp: String,
+        localPort: Int,
+        remoteIp: String,
+        remotePort: Int
     ): AppAttribution {
         val cacheKey = cacheKey(localIp, localPort)
         val localAddress = runCatching { InetAddress.getByName(localIp) }.getOrNull()
@@ -48,7 +75,7 @@ class ConnectionOwnerResolver @Inject constructor(
         val local = InetSocketAddress(localAddress, localPort)
         val remote = InetSocketAddress(remoteAddress, remotePort)
         val uid = runCatching {
-            connectivityManager.getConnectionOwnerUid(OsConstants.IPPROTO_UDP, local, remote)
+            connectivityManager.getConnectionOwnerUid(protocol, local, remote)
         }.getOrDefault(Process.INVALID_UID)
 
         if (uid == Process.INVALID_UID) {

@@ -5,6 +5,7 @@ import com.secureguard.app.vpn.attribution.ConnectionOwnerResolver
 import com.secureguard.app.vpn.parser.DnsPacketParser
 import com.secureguard.app.vpn.parser.DomainRiskClassifier
 import com.secureguard.app.vpn.parser.Ipv4PacketParser
+import com.secureguard.app.vpn.parser.TcpSegmentParser
 import com.secureguard.app.vpn.parser.UdpDatagramParser
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -17,6 +18,7 @@ interface VpnRuntimeEntryPoint {
     fun connectionOwnerResolver(): ConnectionOwnerResolver
     fun ipv4PacketParser(): Ipv4PacketParser
     fun udpDatagramParser(): UdpDatagramParser
+    fun tcpSegmentParser(): TcpSegmentParser
     fun dnsPacketParser(): DnsPacketParser
     fun domainRiskClassifier(): DomainRiskClassifier
 }

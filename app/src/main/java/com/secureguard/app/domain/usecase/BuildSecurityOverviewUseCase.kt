@@ -28,76 +28,65 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             .coerceIn(28, 100)
 
         val headline = when {
-            score >= 86 -> "Looking calm today"
-            score >= 70 -> "Mostly okay, with a few things to tidy"
-            score >= 55 -> "A few risks deserve attention"
-            else -> "A stronger safety cleanup would help"
+            score >= 86 -> "今天看起來很穩"
+            score >= 70 -> "大致不錯，還有一點點要整理"
+            score >= 55 -> "有幾個地方要注意"
+            else -> "現在很適合做一次整理"
         }
         val scoreBandLabel = when {
-            score >= 86 -> "Calm"
-            score >= 70 -> "Mostly steady"
-            score >= 55 -> "Needs attention"
-            else -> "Tidy-up needed"
+            score >= 86 -> "很穩"
+            score >= 70 -> "還不錯"
+            score >= 55 -> "要留意"
+            else -> "快整理"
         }
         val scoreDetail = when {
-            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky ->
-                "Open Wi-Fi is pulling your score down more than the installed apps right now."
-            criticalCount > 0 ->
-                "A few permission-heavy apps are the main reason this score is not higher."
-            highCount > 0 || mediumCount > 0 ->
-                "Most of the score drop comes from apps that want more access than they probably need."
-            else ->
-                "Your score is mostly being held up by a calm app scan and a non-alarming network check."
+            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky -> "現在這個 Wi‑Fi 比 app 還更值得你注意。"
+            criticalCount > 0 -> "有幾個 app 要的權限真的偏多。"
+            highCount > 0 || mediumCount > 0 -> "有些 app 要的東西比想像中多。"
+            else -> "目前沒有很明顯的大問題。"
         }
 
         val summary = when {
-            criticalCount > 0 ->
-                "$criticalCount app${plural(criticalCount)} stand out as unusual for the permissions they requested."
-            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky ->
-                "Your current Wi-Fi looks open, so this is not the best place for sensitive activity."
-            highCount > 0 ->
-                "$highCount app${plural(highCount)} deserve a closer look before you forget about them."
-            else ->
-                "Nothing alarming jumped out immediately, but SecureGuard still found some things worth keeping tidy."
+            criticalCount > 0 -> "有幾個 app 看起來特別需要你回頭看一下。"
+            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky -> "你現在連的 Wi‑Fi 不太適合做重要操作。"
+            highCount > 0 -> "有一些 app 值得你再檢查一次。"
+            else -> "整體還行，但還是有一些小地方可以更乾淨。"
         }
 
         val primaryAction = when {
             wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky ->
-                "Pause sensitive activity" to "This network looks open, so save banking, password changes, and important logins for later."
+                "先不要做重要操作" to "像登入、付款、改密碼這種事，等換個更安心的網路再做。"
             criticalCount > 0 -> {
                 val topCritical = apps.firstOrNull { it.riskLevel == RiskLevel.Critical }
-                "Review ${topCritical?.appName ?: "the riskiest app"}" to
-                    (topCritical?.riskReasons?.joinToString(separator = " / ")
-                        ?: "One app stands out as unusually demanding for its category.")
+                "先看 ${topCritical?.appName ?: "最可疑的 app"}" to
+                    (topCritical?.riskReasons?.firstOrNull() ?: "它要求的權限看起來偏多。")
             }
             highCount > 0 ->
-                "Check a few permission-heavy apps" to "Some apps asked for more access than usual. A quick cleanup would reduce noise and risk."
+                "先檢查幾個高權限 app" to "把比較少用、但權限很多的 app 先看一下。"
             else ->
-                "Keep the current setup tidy" to "Nothing looks urgent right now. A light review of apps you rarely use is enough."
+                "先維持現在這樣" to "目前沒看到急事，只要偶爾回來看看就行。"
         }
 
         val suggestions = buildList {
             if (wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky) {
                 add(
                     SecuritySuggestion(
-                        title = "Avoid sensitive logins on this Wi-Fi",
-                        detail = "Open networks are fine for casual browsing, but avoid banking or password changes here.",
-                        categoryLabel = "Network",
-                        priorityLabel = "Do now"
+                        title = "這個 Wi‑Fi 先別做重要事",
+                        detail = "看影片和滑網頁可以，但先別在這裡登入或付款。",
+                        categoryLabel = "網路",
+                        priorityLabel = "現在"
                     )
                 )
             }
 
-            val suspiciousUtility = apps.firstOrNull {
-                it.riskLevel == RiskLevel.Critical
-            }
+            val suspiciousUtility = apps.firstOrNull { it.riskLevel == RiskLevel.Critical }
             if (suspiciousUtility != null) {
                 add(
                     SecuritySuggestion(
-                        title = "Review ${suspiciousUtility.appName}",
-                        detail = suspiciousUtility.riskReasons.joinToString(separator = " / "),
-                        categoryLabel = "Permissions",
-                        priorityLabel = "Do now"
+                        title = "先看 ${suspiciousUtility.appName}",
+                        detail = suspiciousUtility.riskReasons.firstOrNull() ?: "這個 app 看起來有點可疑。",
+                        categoryLabel = "app",
+                        priorityLabel = "現在"
                     )
                 )
             }
@@ -106,10 +95,10 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             if (microphoneCount > 0) {
                 add(
                     SecuritySuggestion(
-                        title = "Trim microphone access",
-                        detail = "$microphoneCount app${plural(microphoneCount)} asked for microphone access. Keep only the ones you truly use.",
-                        categoryLabel = "Permissions",
-                        priorityLabel = "Soon"
+                        title = "收一下麥克風權限",
+                        detail = "$microphoneCount 個 app 有麥克風權限，先留常用的就好。",
+                        categoryLabel = "權限",
+                        priorityLabel = "稍後"
                     )
                 )
             }
@@ -117,10 +106,10 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             if (apps.none { it.riskLevel == RiskLevel.Critical || it.riskLevel == RiskLevel.High }) {
                 add(
                     SecuritySuggestion(
-                        title = "You can relax a bit",
-                        detail = "There are no standout high-risk apps in this scan, so your next check can stay lightweight.",
-                        categoryLabel = "Overview",
-                        priorityLabel = "Good to know"
+                        title = "目前不用太緊張",
+                        detail = "這次沒有看到特別高風險的 app。",
+                        categoryLabel = "總覽",
+                        priorityLabel = "知道就好"
                     )
                 )
             }
@@ -148,8 +137,6 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             closeCandidates = closeCandidates
         )
     }
-
-    private fun plural(count: Int): String = if (count == 1) "" else "s"
 
     private fun looksSafeToCloseFirst(app: AppScanResult): Boolean {
         val haystack = "${app.appName} ${app.packageName}".lowercase()

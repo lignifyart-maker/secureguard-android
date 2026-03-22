@@ -128,26 +128,32 @@ private fun VpnDisclosureDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Before protection mode starts")
+            Text("要開始保護了")
         },
         text = {
             Text(
-                "SecureGuard uses Android's VpnService only for on-device security analysis. Your traffic stays on this phone and is not uploaded to an outside security server."
+                "它會幫你看看手機裡的新連線。資料只留在這支手機，不會送出去。"
             )
         },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Continue")
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE98F6F))
+            ) {
+                Text("開始")
             }
         },
         dismissButton = {
             Button(
                 onClick = onDismiss,
+                shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
+                    containerColor = Color(0xFFF2D9C7),
+                    contentColor = Color(0xFF7A4E35)
                 )
             ) {
-                Text("Not now")
+                Text("等等")
             }
         }
     )
@@ -179,25 +185,21 @@ private fun PermissionAuditScreen(
                         IconButton(onClick = onCloseRecentActivityHistory) {
                             Icon(
                                 Icons.AutoMirrored.Outlined.ArrowBack,
-                                contentDescription = "Back to dashboard"
+                                contentDescription = "回到首頁"
                             )
                         }
                     }
                 },
                 title = {
                     Text(
-                        text = if (state.isRecentActivityHistoryOpen) {
-                            "Recent activity history"
-                        } else {
-                            "SecureGuard"
-                        },
+                        text = if (state.isRecentActivityHistoryOpen) "全部動態" else "SecureGuard",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold
                     )
                 },
                 actions = {
                     IconButton(onClick = onRefresh) {
-                        Icon(Icons.Outlined.Refresh, contentDescription = "Refresh scan")
+                        Icon(Icons.Outlined.Refresh, contentDescription = "重看一次")
                     }
                 }
             )
@@ -248,7 +250,7 @@ private fun LoadingState(innerPadding: PaddingValues) {
         ) {
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             Text(
-                text = "Preparing your on-device safety dashboard...",
+                text = "正在準備首頁…",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -271,7 +273,7 @@ private fun ErrorState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "We could not finish the safety check just now.",
+            text = "剛剛沒有順利完成",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
@@ -282,8 +284,12 @@ private fun ErrorState(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRefresh) {
-            Text("Try again")
+        Button(
+            onClick = onRefresh,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE98F6F))
+        ) {
+            Text("再試一次")
         }
     }
 }
@@ -374,17 +380,17 @@ private fun AuditContent(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniStatusCard(
-                    title = "High alert",
+                    title = "要先看",
                     value = criticalApps.toString(),
                     tone = StatusTone.Warm
                 )
                 MiniStatusCard(
-                    title = "Needs review",
+                    title = "再看一下",
                     value = highApps.toString(),
                     tone = StatusTone.Sun
                 )
                 MiniStatusCard(
-                    title = "All scanned",
+                    title = "看過了",
                     value = state.apps.size.toString(),
                     tone = StatusTone.Calm
                 )
@@ -423,7 +429,7 @@ private fun AuditContent(
 
         item {
             Text(
-                text = "Apps worth checking first",
+                text = "可以先看的 app",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -446,12 +452,12 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Live connection feed",
+                text = "現在手機在做什麼",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "This is your plain-language traffic view. It highlights recent DNS and UDP events instead of raw packet data.",
+                text = "這裡只講重點，不會塞很多難懂的字。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -500,7 +506,7 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 )
             }
             Text(
-                text = "Seen ${preview.relativeTime}",
+                text = "時間：${preview.relativeTime}",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -510,7 +516,7 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${preview.recentCount} recent event(s)",
+                text = "最近 ${preview.recentCount} 筆",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -545,7 +551,7 @@ private fun RecentActivityCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = "Recent activity",
+                    text = "最近發生的事",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
@@ -556,19 +562,19 @@ private fun RecentActivityCard(
                 ) {
                     if (timeline.items.isNotEmpty()) {
                         TextButtonLike(
-                            text = "History",
+                            text = "全部",
                             onClick = onOpenHistory
                         )
                     }
                     if (timeline.hasMoreThanPreview) {
                         TextButtonLike(
-                            text = if (isExpanded) "Collapse" else "View all",
+                            text = if (isExpanded) "收起來" else "多看一點",
                             onClick = onToggleExpanded
                         )
                     }
                     if (timeline.items.isNotEmpty() || isClearing) {
                         TextButtonLike(
-                            text = if (isClearing) "Clearing..." else "Clear",
+                            text = if (isClearing) "整理中…" else "清空",
                             enabled = !isClearing,
                             onClick = onClear
                         )
@@ -577,13 +583,13 @@ private fun RecentActivityCard(
             }
             if (isExpanded) {
                 Text(
-                    text = "Showing ${visibleItems.size} recent event(s)",
+                    text = "現在看到 ${visibleItems.size} 筆",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else if (timeline.hasMoreThanPreview) {
                 Text(
-                    text = "Showing the latest 3 of ${timeline.items.size} event(s)",
+                    text = "先看最新 3 筆，共 ${timeline.items.size} 筆",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -617,9 +623,9 @@ private fun RecentActivityCard(
                     ) {
                         Text(
                             text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
-                                "No recent activity yet"
+                                "現在還沒看到新東西"
                             } else {
-                                "Protection mode is off"
+                                "你還沒開始保護"
                             },
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
@@ -627,9 +633,9 @@ private fun RecentActivityCard(
                         )
                         Text(
                             text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
-                                "SecureGuard is watching for new DNS events. Recent app lookups will appear here once traffic starts moving."
+                                "先去用幾個 app，這裡就會慢慢出現新動態。"
                             } else {
-                                "Turn on protection mode to start collecting recent DNS lookups and app attribution in this panel."
+                                "按下開始後，再去滑手機，這裡就會有內容。"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -670,7 +676,7 @@ private fun RecentActivityHistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Full recent activity",
+                        text = "全部動態",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -680,7 +686,7 @@ private fun RecentActivityHistoryScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${timeline.items.size} event(s) currently in local history",
+                        text = "這裡一共有 ${timeline.items.size} 筆",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -699,7 +705,7 @@ private fun RecentActivityHistoryScreen(
                     }
                     if (timeline.items.isNotEmpty() || isClearing) {
                         TextButtonLike(
-                            text = if (isClearing) "Clearing..." else "Clear history",
+                            text = if (isClearing) "整理中…" else "清空全部",
                             enabled = !isClearing,
                             onClick = onClear
                         )
@@ -710,9 +716,9 @@ private fun RecentActivityHistoryScreen(
                         ) {
                             Text(
                                 text = if (vpnState == VpnProtectionState.On || vpnState == VpnProtectionState.Starting) {
-                                    "Protection is on. As new DNS and UDP traffic appears, it will build up here."
+                                    "保護已開啟。等你開始用手機，這裡就會慢慢出現內容。"
                                 } else {
-                                    "Turn on local protection and use a few apps to start building recent history."
+                                    "先開啟保護，再去用幾個 app，這裡才會有東西。"
                                 },
                                 modifier = Modifier.padding(16.dp),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -798,16 +804,16 @@ private fun ProtectionModeCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Protection mode",
+                text = "保護開關",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             RiskBadgeText(
-                text = "Local only",
+                text = "只在手機裡",
                 color = Color(0xFF4A8C69)
             )
             Text(
-                text = "SecureGuard uses Android's local VPN interface to watch traffic on this phone only. Your traffic is not uploaded to an outside security server.",
+                text = "它只幫你在這支手機裡看新連線，不會把資料送到外面。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -835,19 +841,20 @@ private fun ProtectionModeCard(
                 } else {
                     onEnableProtection
                 },
+                shape = RoundedCornerShape(22.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                        Color(0xFFC55A54)
+                        Color(0xFFF2A6A0)
                     } else {
-                        MaterialTheme.colorScheme.primary
+                        Color(0xFFE98F6F)
                     }
                 )
             ) {
                 Text(
                     if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                        "Stop local protection"
+                        "先停一下"
                     } else {
-                        "Start local protection"
+                        "開始保護"
                     }
                 )
             }
@@ -867,9 +874,9 @@ private fun QuickStartCard(state: VpnProtectionState) {
         ) {
             Text(
                 text = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                    "What SecureGuard is doing now"
+                    "它現在在做什麼"
                 } else {
-                    "Get useful results in 3 steps"
+                    "三步驟就看得懂"
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
@@ -887,42 +894,42 @@ private fun QuickStartCard(state: VpnProtectionState) {
                     ChecklistItem(
                         icon = Icons.Outlined.HealthAndSafety,
                         label = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                            "Protection is running on this phone"
+                            "它已經開始看新連線"
                         } else {
-                            "Start local protection"
+                            "先按開始"
                         },
                         detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                            "SecureGuard is using Android's local VPN mode to inspect traffic on-device only."
+                            "它現在只是在這支手機裡幫你看動態。"
                         } else {
-                            "Approve Android's VPN prompt once so SecureGuard can start watching traffic locally."
+                            "先同意系統跳出來的提示。"
                         }
                     )
                     ChecklistItem(
                         icon = Icons.Outlined.NetworkWifi,
                         label = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                            "Use your phone normally for a minute"
+                            "照平常一樣滑手機"
                         } else {
-                            "Open a few apps after enabling it"
+                            "打開幾個 app"
                         },
                         detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                            "Open a browser, chat app, or video app to generate real DNS and UDP activity."
+                            "像聊天、看影片、滑網頁都可以。"
                         } else {
-                            "A browser, chat app, or streaming app will give the dashboard something real to show."
+                            "這樣畫面就不會空空的。"
                         }
                     )
                     ChecklistItem(
                         icon = Icons.Outlined.People,
-                        label = "Read the activity feed",
+                        label = "回來看結果",
                         detail = if (state == VpnProtectionState.On || state == VpnProtectionState.Starting) {
-                            "The feed will show recent app targets and event types when Android can map them."
+                            "你會看到是哪個 app 有動靜。"
                         } else {
-                            "Recent activity will show app names, targets, and event types instead of raw packet data."
+                            "它會用簡單的話告訴你剛剛發生什麼事。"
                         }
                     )
                 }
             }
             Text(
-                text = "This is a calm local monitor, not a remote VPN service or a raw packet sniffer.",
+                text = "這裡只講重點，不講難懂的技術細節。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -972,13 +979,13 @@ private fun HeroCard(
             }
 
             Text(
-                text = "See which apps are talking, before it feels invisible.",
+                text = "先看懂手機有沒有在偷偷忙。",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = "SecureGuard turns Android's local VPN mode into an on-device activity dashboard, so you can spot DNS lookups, app traffic hints, and risky patterns without sending your traffic to a cloud scanner.",
+                text = "它會把看不見的連線，變成你看得懂的小提醒。",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -988,19 +995,20 @@ private fun HeroCard(
                 scoreDetail = overview.scoreDetail
             )
             Text(
-                text = "$notableApps of $totalApps installed apps are worth a second look. Last scan: $lastScanLabel",
+                text = "$totalApps 個 app 裡，有 $notableApps 個值得你回頭看。上次檢查：$lastScanLabel",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
             )
 
             Button(
                 onClick = onRefresh,
+                shape = RoundedCornerShape(22.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = Color(0xFFFFD37D),
+                    contentColor = Color(0xFF5E4300)
                 )
             ) {
-                Text("Refresh device check")
+                Text("再看一次")
             }
         }
     }
@@ -1020,7 +1028,7 @@ private fun ScoreBubble(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             Text(
-                text = "Safety score",
+                text = "安全分數",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -1057,7 +1065,7 @@ private fun PrimaryActionCard(overview: SecurityOverview) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Best next step",
+                text = "最值得先做的一步",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -1281,12 +1289,12 @@ private fun CloseCandidatesCard(apps: List<AppScanResult>) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Safe to close first (${apps.size})",
+                text = "適合優先關閉 (${apps.size})",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "These look more like optional utility apps than core phone tools, so they are good first candidates to review or close when you want a lighter phone.",
+                text = "這些 app 看起來比較像可有可無的工具型 app，不像手機核心功能，所以若你想先減少噪音或風險，它們是很好的優先檢查或關閉對象。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1398,7 +1406,7 @@ private fun WifiSafetyCard(
                 }
                 Column {
                     Text(
-                        text = "Current network vibe",
+                        text = "目前網路狀態",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1435,7 +1443,7 @@ private fun WifiSafetyCard(
             )
 
             Text(
-                text = "Protection: ${snapshot.securityLabel}",
+                text = "保護狀態：${snapshot.securityLabel}",
                 style = MaterialTheme.typography.bodyMedium
             )
             if (snapshot.canManageTrust) {
@@ -1451,16 +1459,16 @@ private fun WifiSafetyCard(
                 ) {
                     Text(
                         if (snapshot.isTrustedNetwork) {
-                            "Trusted network"
+                            "已信任網路"
                         } else {
-                            "Mark as trusted"
+                            "標記為信任"
                         }
                     )
                 }
             }
             if (trustedNetworks.isNotEmpty()) {
                 Text(
-                    text = "Saved trusted Wi-Fi",
+                    text = "已儲存的可信任 Wi‑Fi",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1481,7 +1489,7 @@ private fun WifiSafetyCard(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             TextButtonLike(
-                                text = "Remove",
+                                text = "移除",
                                 onClick = { onRemoveTrustedNetwork(trustedSsid) }
                             )
                         }
@@ -1490,20 +1498,20 @@ private fun WifiSafetyCard(
             }
             snapshot.gatewayAddress?.let {
                 Text(
-                    text = "Gateway: $it",
+                    text = "閘道：$it",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             snapshot.localAddress?.let {
                 Text(
-                    text = "Local address: $it",
+                    text = "本機位址：$it",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                text = "DNS: ${snapshot.dnsSummary}",
+                text = "DNS：${snapshot.dnsSummary}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1513,7 +1521,7 @@ private fun WifiSafetyCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Visible devices: ${snapshot.nearbyDeviceCount}",
+                text = "可見裝置：${snapshot.nearbyDeviceCount}",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -1545,7 +1553,7 @@ private fun WifiSafetyCard(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Allow Wi-Fi details")
+                    Text("允許 Wi‑Fi 詳細資訊")
                 }
             }
         }
@@ -1563,7 +1571,7 @@ private fun TextButtonLike(
         enabled = enabled,
         shape = RoundedCornerShape(999.dp),
         color = if (enabled) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            Color(0xFFFFE3D4)
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         },
@@ -1573,7 +1581,7 @@ private fun TextButtonLike(
             text = text,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             color = if (enabled) {
-                MaterialTheme.colorScheme.primary
+                Color(0xFF9C5B3D)
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
@@ -1725,10 +1733,10 @@ private fun RiskBadgeText(
 }
 
 private fun heroHeadline(notableApps: Int): String = when {
-    notableApps == 0 -> "Everything looks calm"
-    notableApps <= 2 -> "Only a few apps need a look"
-    notableApps <= 5 -> "A gentle cleanup could help"
-    else -> "Several apps deserve attention"
+    notableApps == 0 -> "目前很平穩"
+    notableApps <= 2 -> "有幾個地方可再看一下"
+    notableApps <= 5 -> "現在很適合做點小整理"
+    else -> "今天需要多留意一點"
 }
 
 @Composable
@@ -1770,13 +1778,20 @@ private fun protectionAccentColor(state: VpnProtectionState): Color = when (stat
 }
 
 private fun protectionHelperText(state: VpnProtectionState): String = when (state) {
-    VpnProtectionState.Off -> "Turn this on when you want local DNS and VPN activity hints."
-    VpnProtectionState.Starting -> "SecureGuard is opening the local tunnel and preparing the first events."
-    VpnProtectionState.On -> "Protection mode is actively collecting lightweight on-device event signals."
-    VpnProtectionState.Error -> "Something interrupted local protection mode, so event hints may pause until it starts again."
+    VpnProtectionState.Off -> "按下開始後，它才會幫你看新連線。"
+    VpnProtectionState.Starting -> "快好了，再等一下。"
+    VpnProtectionState.On -> "現在它正在幫你看新動態。"
+    VpnProtectionState.Error -> "剛剛有點卡住，等一下可以再試一次。"
 }
 
 private fun connectionFeedAccent(label: String): Color = when (label) {
+    "多看一眼" -> Color(0xFFC55A54)
+    "先留意" -> Color(0xFFDD8B42)
+    "看起來正常" -> Color(0xFF4A8C69)
+    "已準備" -> Color(0xFF4A8C69)
+    "啟動中" -> Color(0xFFB27A1F)
+    "未開始" -> Color(0xFF6F7C92)
+    "一般" -> Color(0xFF6F7C92)
     "Tracker" -> Color(0xFFC55A54)
     "Sensitive" -> Color(0xFFDD8B42)
     "Routine" -> Color(0xFF4A8C69)
@@ -1786,26 +1801,27 @@ private fun connectionFeedAccent(label: String): Color = when (label) {
 }
 
 private fun activityAccent(label: String): Color = when (label) {
-    "Quiet" -> Color(0xFF4A8C69)
-    "Light activity" -> Color(0xFF7B9E68)
-    "Busy" -> Color(0xFFDD8B42)
-    "Very busy" -> Color(0xFFC55A54)
-    "Warming up" -> Color(0xFFB27A1F)
+    "安靜" -> Color(0xFF4A8C69)
+    "有一點動靜" -> Color(0xFF7B9E68)
+    "有點忙" -> Color(0xFFDD8B42)
+    "很忙" -> Color(0xFFC55A54)
+    "暖機中" -> Color(0xFFB27A1F)
     else -> Color(0xFF6F7C92)
 }
 
 private fun suggestionPriorityColor(label: String): Color = when (label) {
-    "Do now" -> Color(0xFFC55A54)
-    "Soon" -> Color(0xFFDD8B42)
-    "Good to know" -> Color(0xFF4A8C69)
+    "現在" -> Color(0xFFC55A54)
+    "稍後" -> Color(0xFFDD8B42)
+    "知道就好" -> Color(0xFF4A8C69)
     else -> Color(0xFF6F7C92)
 }
 
 private fun attributionAccent(label: String): Color = when (label) {
-    "Mapped" -> Color(0xFF4A8C69)
-    "Pending" -> Color(0xFFB27A1F)
-    "Partial" -> Color(0xFFDD8B42)
-    "Fallback" -> Color(0xFFC55A54)
+    "已認出" -> Color(0xFF4A8C69)
+    "未認出" -> Color(0xFFB27A1F)
+    "部分" -> Color(0xFFDD8B42)
+    "不完整" -> Color(0xFFC55A54)
+    "補回" -> Color(0xFF7B9E68)
     else -> Color(0xFF6F7C92)
 }
 

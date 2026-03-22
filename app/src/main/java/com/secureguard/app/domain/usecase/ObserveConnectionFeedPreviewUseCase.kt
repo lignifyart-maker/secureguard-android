@@ -15,182 +15,165 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
             val mostRecent = events.firstOrNull()
             when {
                 mostRecent != null -> {
-                    val target = mostRecent.host ?: mostRecent.ipAddress ?: "unknown target"
-                    val appName = mostRecent.appName ?: "Unknown app"
+                    val target = mostRecent.host ?: mostRecent.ipAddress ?: "未知目標"
+                    val appName = mostRecent.appName ?: "未知 app"
                     val title = when (mostRecent.eventType) {
-                        "VPN_STARTED" -> "Protection mode started"
-                        "VPN_STOPPED" -> "Protection mode stopped"
-                        "VPN_ERROR" -> "Protection mode needs attention"
-                        "UDP_QUIC_TRAFFIC" -> "$appName opened encrypted app traffic"
-                        "UDP_NTP_TRAFFIC" -> "$appName checked network time"
-                        "UDP_STUN_TRAFFIC" -> "$appName opened call or peer traffic"
-                        "UDP_APP_TRAFFIC" -> "$appName sent non-DNS UDP traffic"
-                        else -> {
-                            when (mostRecent.riskLabel) {
-                                "Tracker" -> "A tracking-style domain was contacted"
-                                "Sensitive" -> "A more sensitive service was contacted"
-                                else -> "$appName checked $target"
-                            }
+                        "VPN_STARTED" -> "保護已開始"
+                        "VPN_STOPPED" -> "保護已停止"
+                        "VPN_ERROR" -> "保護暫時出問題"
+                        "TCP_HTTPS_CONNECT" -> "$appName 正在連安全網站"
+                        "TCP_HTTP_CONNECT" -> "$appName 正在連網站"
+                        "TCP_PUSH_CONNECT" -> "$appName 正在接收背景消息"
+                        "TCP_APP_CONNECT" -> "$appName 正在連線"
+                        "UDP_QUIC_TRAFFIC" -> "$appName 正在傳資料"
+                        "UDP_NTP_TRAFFIC" -> "$appName 正在對時間"
+                        "UDP_STUN_TRAFFIC" -> "$appName 正在通話或找裝置"
+                        "UDP_APP_TRAFFIC" -> "$appName 正在傳送資料"
+                        else -> when (mostRecent.riskLabel) {
+                            "Tracker" -> "有 app 連到像追蹤用的地方"
+                            "Sensitive" -> "有 app 連到比較敏感的地方"
+                            else -> "$appName 正在查 $target"
                         }
                     }
                     val detail = when (mostRecent.eventType) {
-                        "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
-                        "VPN_STOPPED" -> "Local protection mode was turned off."
-                        "VPN_ERROR" -> "SecureGuard could not keep the local tunnel alive."
-                        "UDP_QUIC_TRAFFIC" -> "$appName sent encrypted UDP traffic to $target, which often means QUIC-style app traffic."
-                        "UDP_NTP_TRAFFIC" -> "$appName contacted $target to check or sync time."
-                        "UDP_STUN_TRAFFIC" -> "$appName contacted $target using a port often associated with calling or peer discovery."
-                        "UDP_APP_TRAFFIC" -> "$appName sent non-DNS UDP traffic to $target."
+                        "VPN_STARTED" -> "現在開始幫你看手機裡的新連線。"
+                        "VPN_STOPPED" -> "現在暫時不會再看到新動態。"
+                        "VPN_ERROR" -> "保護沒有順利跑起來，等一下可以再試一次。"
+                        "TCP_HTTPS_CONNECT" -> "$appName 連到了 $target。"
+                        "TCP_HTTP_CONNECT" -> "$appName 連到了 $target。"
+                        "TCP_PUSH_CONNECT" -> "$appName 正在和 $target 保持背景連線。"
+                        "TCP_APP_CONNECT" -> "$appName 正在和 $target 傳資料。"
+                        "UDP_QUIC_TRAFFIC" -> "$appName 正在和 $target 快速傳資料。"
+                        "UDP_NTP_TRAFFIC" -> "$appName 正在和 $target 對時間。"
+                        "UDP_STUN_TRAFFIC" -> "$appName 正在和 $target 做通話或裝置探索。"
+                        "UDP_APP_TRAFFIC" -> "$appName 正在和 $target 傳資料。"
                         else -> when (mostRecent.riskLabel) {
-                            "Tracker" -> "$appName asked about $target, which looks like tracking or ad traffic."
-                            "Sensitive" -> "$appName checked $target, which touches a more sensitive service."
-                            else -> "${describeQueryEvent(mostRecent.eventType)} / ${humanizeRisk(mostRecent.riskLabel)}"
+                            "Tracker" -> "$appName 查了 $target，這看起來像追蹤或廣告流量。"
+                            "Sensitive" -> "$appName 查了 $target，這可能和比較敏感的服務有關。"
+                            else -> simpleDetailFor(mostRecent.eventType, target)
                         }
                     }
                     val actionHint = when (mostRecent.riskLabel) {
-                        "Tracker" -> "If this app feels optional, it is a good one to review or close first."
-                        "Sensitive" -> "If you were about to sign in or bank, pause and make sure the app is the one you expected."
-                        "Routine" -> "This looks routine, so you usually do not need to act on it."
-                        else -> "Keep an eye on this feed if you want a better sense of what your phone is doing."
+                        "Tracker" -> "如果這個 app 不常用，可以先留意它。"
+                        "Sensitive" -> "如果你正要登入或付款，先確認這是你要用的 app。"
+                        "Routine" -> "這看起來很普通，先不用緊張。"
+                        else -> "先看懂大方向就好，不用每一筆都研究。"
                     }
-                    val activityLabel = activityLabelFor(events.size)
-                    val recentSummary = recentSummaryFor(events.size)
                     ConnectionFeedPreview(
                         title = title,
-                        sourceLabel = sourceLabelFor(
-                            appName = appName,
-                            attributionLabel = mostRecent.attributionLabel
-                        ),
+                        sourceLabel = sourceLabelFor(appName, mostRecent.attributionLabel),
                         targetLabel = target,
                         eventLabel = eventLabelFor(mostRecent.eventType),
                         detail = detail,
                         actionHint = actionHint,
-                        activityLabel = activityLabel,
-                        recentSummary = recentSummary,
-                        riskLabel = mostRecent.riskLabel,
+                        activityLabel = activityLabelFor(events.size),
+                        recentSummary = recentSummaryFor(events.size),
+                        riskLabel = riskLabelForUi(mostRecent.riskLabel),
                         relativeTime = relativeTimeFrom(mostRecent.createdAt),
                         recentCount = events.size
                     )
                 }
+
                 vpnState == VpnProtectionState.On ->
                     ConnectionFeedPreview(
-                        title = "Listening for new traffic",
-                        sourceLabel = "SecureGuard feed",
-                        targetLabel = "Waiting for the first target",
-                        eventLabel = "DNS watch",
-                        detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
-                        actionHint = "Leave protection mode on for a moment and this card will start to fill in.",
-                        activityLabel = "Quiet",
-                        recentSummary = "No recent connection events yet.",
-                        riskLabel = "Ready",
-                        relativeTime = "now",
+                        title = "正在等新動態",
+                        sourceLabel = "SecureGuard 動態",
+                        targetLabel = "還沒有新目標",
+                        eventLabel = "等待中",
+                        detail = "你可以先去用幾個 app，這裡就會開始出現新內容。",
+                        actionHint = "先打開瀏覽器、聊天或影片 app 試試看。",
+                        activityLabel = "安靜",
+                        recentSummary = "現在還沒有看到新動態。",
+                        riskLabel = "已準備",
+                        relativeTime = "現在",
                         recentCount = 0
                     )
+
                 vpnState == VpnProtectionState.Starting ->
                     ConnectionFeedPreview(
-                        title = "Protection is starting",
-                        sourceLabel = "SecureGuard feed",
-                        targetLabel = "Tunnel is still warming up",
-                        eventLabel = "VPN startup",
-                        detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
-                        actionHint = "Give it a few seconds before expecting any live event hints.",
-                        activityLabel = "Warming up",
-                        recentSummary = "The feed is still getting ready.",
-                        riskLabel = "Starting",
-                        relativeTime = "now",
+                        title = "保護正在打開",
+                        sourceLabel = "SecureGuard 動態",
+                        targetLabel = "先等一下",
+                        eventLabel = "啟動中",
+                        detail = "還差一點點，等它準備好就會開始顯示新動態。",
+                        actionHint = "幾秒後再回來看就好。",
+                        activityLabel = "暖機中",
+                        recentSummary = "動態正在準備中。",
+                        riskLabel = "啟動中",
+                        relativeTime = "現在",
                         recentCount = 0
                     )
+
                 else ->
                     ConnectionFeedPreview(
-                        title = "No live connections yet",
-                        sourceLabel = "SecureGuard feed",
-                        targetLabel = "No target yet",
-                        eventLabel = "Waiting",
-                        detail = "Turn on protection mode to start building a local connection feed for app traffic.",
-                        actionHint = "When you want a calm traffic overview, turn protection mode on first.",
-                        activityLabel = "Idle",
-                        recentSummary = "There is no recent live traffic to summarize yet.",
-                        riskLabel = "Idle",
-                        relativeTime = "waiting",
+                        title = "還沒有開始看連線",
+                        sourceLabel = "SecureGuard 動態",
+                        targetLabel = "先開啟保護",
+                        eventLabel = "未開始",
+                        detail = "開啟保護後，這裡才會出現 app 的連線動態。",
+                        actionHint = "先按下開啟保護，再去用幾個 app。",
+                        activityLabel = "未開始",
+                        recentSummary = "目前沒有可看的新動態。",
+                        riskLabel = "未開始",
+                        relativeTime = "等待中",
                         recentCount = 0
                     )
             }
         }
     }
 
-    private fun humanizeRisk(riskLabel: String): String = when (riskLabel) {
-        "Tracker" -> "looks like tracking or ad traffic"
-        "Sensitive" -> "touches a more sensitive domain"
-        "Routine" -> "looks routine"
-        else -> "was observed"
-    }
-
-    private fun describeQueryEvent(eventType: String): String = when (eventType) {
-        "DNS_A_QUERY" -> "asked for an IPv4 address"
-        "DNS_AAAA_QUERY" -> "asked for an IPv6 address"
-        "DNS_CNAME_QUERY" -> "followed a domain alias"
-        "DNS_MX_QUERY" -> "looked up mail routing"
-        "UDP_QUIC_TRAFFIC" -> "opened encrypted UDP app traffic"
-        "UDP_NTP_TRAFFIC" -> "checked network time"
-        "UDP_STUN_TRAFFIC" -> "opened call or peer discovery traffic"
-        "UDP_APP_TRAFFIC" -> "generated non-DNS UDP traffic"
-        else -> "generated a DNS lookup"
+    private fun simpleDetailFor(eventType: String, target: String): String = when (eventType) {
+        "DNS_A_QUERY", "DNS_AAAA_QUERY", "DNS_CNAME_QUERY", "DNS_MX_QUERY" -> "剛剛查了 $target。"
+        else -> "剛剛連到了 $target。"
     }
 
     private fun eventLabelFor(eventType: String): String = when (eventType) {
-        "VPN_STARTED" -> "VPN started"
-        "VPN_STOPPED" -> "VPN stopped"
-        "VPN_ERROR" -> "VPN issue"
-        "DNS_A_QUERY" -> "IPv4 lookup"
-        "DNS_AAAA_QUERY" -> "IPv6 lookup"
-        "DNS_CNAME_QUERY" -> "Alias lookup"
-        "DNS_MX_QUERY" -> "Mail lookup"
-        "UDP_QUIC_TRAFFIC" -> "Encrypted UDP"
-        "UDP_NTP_TRAFFIC" -> "Time sync"
-        "UDP_STUN_TRAFFIC" -> "Peer traffic"
-        "UDP_APP_TRAFFIC" -> "UDP traffic"
-        else -> "Observed traffic"
+        "VPN_STARTED" -> "保護開始"
+        "VPN_STOPPED" -> "保護停止"
+        "VPN_ERROR" -> "保護異常"
+        "DNS_A_QUERY", "DNS_AAAA_QUERY", "DNS_CNAME_QUERY", "DNS_MX_QUERY" -> "網站查詢"
+        "TCP_HTTPS_CONNECT", "TCP_HTTP_CONNECT", "TCP_PUSH_CONNECT", "TCP_APP_CONNECT" -> "網路連線"
+        "UDP_QUIC_TRAFFIC", "UDP_NTP_TRAFFIC", "UDP_STUN_TRAFFIC", "UDP_APP_TRAFFIC" -> "資料傳送"
+        else -> "新動態"
     }
 
     private fun sourceLabelFor(appName: String, attributionLabel: String?): String = when {
-        appName == "SecureGuard" -> "Source: SecureGuard"
-        appName == "Unknown app" && !attributionLabel.isNullOrBlank() ->
-            "Source: app not mapped yet / ${humanizeAttribution(attributionLabel)}"
-        appName == "Unknown app" -> "Source: app not mapped yet"
-        !attributionLabel.isNullOrBlank() -> "Source: $appName / ${humanizeAttribution(attributionLabel)}"
-        else -> "Source: $appName"
+        appName == "SecureGuard" -> "來源：SecureGuard"
+        appName == "未知 app" && !attributionLabel.isNullOrBlank() -> "來源：還沒完全認出是哪個 app"
+        appName == "未知 app" -> "來源：還沒認出是哪個 app"
+        else -> "來源：$appName"
     }
 
-    private fun humanizeAttribution(label: String): String = when (label) {
-        "Mapped from Android owner lookup" -> "Android matched this app"
-        "Matched from recent port history" -> "SecureGuard reused a very recent app match"
-        "Owner not mapped yet" -> "Android has not mapped it yet"
-        "UID resolved without package" -> "Android resolved a UID but no package name"
-        "Address parse failed" -> "Address details were incomplete"
-        else -> label
+    private fun riskLabelForUi(riskLabel: String): String = when (riskLabel) {
+        "Tracker" -> "多看一眼"
+        "Sensitive" -> "先留意"
+        "Routine" -> "看起來正常"
+        "Ready" -> "已準備"
+        "Starting" -> "啟動中"
+        else -> "一般"
     }
 
     private fun activityLabelFor(recentCount: Int): String = when {
-        recentCount <= 1 -> "Quiet"
-        recentCount <= 4 -> "Light activity"
-        recentCount <= 8 -> "Busy"
-        else -> "Very busy"
+        recentCount <= 1 -> "安靜"
+        recentCount <= 4 -> "有一點動靜"
+        recentCount <= 8 -> "有點忙"
+        else -> "很忙"
     }
 
     private fun recentSummaryFor(recentCount: Int): String = when {
-        recentCount <= 1 -> "Only one very recent event is in view."
-        recentCount <= 4 -> "A small handful of recent events are in view."
-        recentCount <= 8 -> "This feed has picked up a noticeable burst of recent events."
-        else -> "This feed is fairly busy right now."
+        recentCount <= 1 -> "目前只看到很少的新動態。"
+        recentCount <= 4 -> "最近有幾筆新動態。"
+        recentCount <= 8 -> "最近動得比較明顯。"
+        else -> "最近這台手機很忙。"
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {
         val seconds = ((System.currentTimeMillis() - createdAt) / 1000).coerceAtLeast(0)
         return when {
-            seconds < 5 -> "just now"
-            seconds < 60 -> "${seconds}s ago"
-            seconds < 3600 -> "${seconds / 60}m ago"
-            else -> "${seconds / 3600}h ago"
+            seconds < 5 -> "剛剛"
+            seconds < 60 -> "${seconds} 秒前"
+            seconds < 3600 -> "${seconds / 60} 分鐘前"
+            else -> "${seconds / 3600} 小時前"
         }
     }
 }

@@ -39,6 +39,8 @@ class LocalVpnService : VpnService() {
     private var lastLoggedDnsAt: Long = 0L
     private var lastLoggedUdpSignature: String? = null
     private var lastLoggedUdpAt: Long = 0L
+    private var lastLoggedTcpSignature: String? = null
+    private var lastLoggedTcpAt: Long = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -56,20 +58,20 @@ class LocalVpnService : VpnService() {
         super.onDestroy()
         if (_serviceState.value != VpnProtectionState.Off) {
             _serviceState.value = VpnProtectionState.Off
-            _statusMessage.value = "Protection mode stopped."
+            _statusMessage.value = "保護模式已停止。"
         }
     }
 
     private fun startProtection() {
         if (tunnelInterface != null) {
             _serviceState.value = VpnProtectionState.On
-            _statusMessage.value = "Protection mode is already active."
+            _statusMessage.value = "保護模式已經在執行中。"
             return
         }
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification("Local monitoring is getting ready."))
+        startForeground(NOTIFICATION_ID, buildNotification("本機監看功能正在準備中。"))
         _serviceState.value = VpnProtectionState.Starting
-        _statusMessage.value = "Preparing local VPN protection on this device."
+        _statusMessage.value = "正在為這台裝置準備本機 VPN 保護。"
 
         runCatching {
             val builder = Builder()
@@ -82,17 +84,17 @@ class LocalVpnService : VpnService() {
                 tunnelInterface = parcelFileDescriptor
                 startReadLoop(parcelFileDescriptor)
                 _serviceState.value = VpnProtectionState.On
-                _statusMessage.value = "Protection mode is on. Traffic monitoring features can build on this tunnel."
+                _statusMessage.value = "保護模式已開啟。流量監看功能現在可以建立在這條本機通道上。"
                 logNetworkEvent(
                     eventType = "VPN_STARTED",
                     riskLabel = "Info",
                     host = "local_protection"
                 )
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                manager.notify(NOTIFICATION_ID, buildNotification("Protection mode is on."))
+                manager.notify(NOTIFICATION_ID, buildNotification("保護模式已開啟。"))
             } else {
                 _serviceState.value = VpnProtectionState.Error
-                _statusMessage.value = "SecureGuard could not establish the local VPN tunnel."
+                _statusMessage.value = "SecureGuard 無法建立本機 VPN 通道。"
                 logNetworkEvent(
                     eventType = "VPN_ERROR",
                     riskLabel = "Caution",
@@ -103,7 +105,7 @@ class LocalVpnService : VpnService() {
             }
         }.onFailure {
             _serviceState.value = VpnProtectionState.Error
-            _statusMessage.value = "SecureGuard hit a problem while starting protection mode."
+            _statusMessage.value = "SecureGuard 在啟動保護模式時發生問題。"
             logNetworkEvent(
                 eventType = "VPN_ERROR",
                 riskLabel = "Caution",
@@ -125,7 +127,7 @@ class LocalVpnService : VpnService() {
             host = "local_protection"
         )
         _serviceState.value = VpnProtectionState.Off
-        _statusMessage.value = "Protection mode is off."
+        _statusMessage.value = "保護模式已關閉。"
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -145,7 +147,7 @@ class LocalVpnService : VpnService() {
                 NetworkEventEntity(
                     packageName = null,
                     appName = "SecureGuard",
-                    attributionLabel = "SecureGuard service event",
+                    attributionLabel = "SecureGuard 服務事件",
                     host = host,
                     ipAddress = null,
                     protocol = protocol,
@@ -167,6 +169,7 @@ class LocalVpnService : VpnService() {
             )
             val ipv4Parser = runtimeEntryPoint.ipv4PacketParser()
             val udpParser = runtimeEntryPoint.udpDatagramParser()
+            val tcpParser = runtimeEntryPoint.tcpSegmentParser()
             val dnsParser = runtimeEntryPoint.dnsPacketParser()
             val domainRiskClassifier = runtimeEntryPoint.domainRiskClassifier()
             val connectionOwnerResolver = runtimeEntryPoint.connectionOwnerResolver()
@@ -178,77 +181,137 @@ class LocalVpnService : VpnService() {
                 if (count <= 0) continue
 
                 val ipv4Packet = ipv4Parser.parse(buffer, count) ?: continue
-                if (ipv4Packet.protocolNumber != 17) continue
+                when (ipv4Packet.protocolNumber) {
+                    17 -> {
+                        val udpDatagram = udpParser.parse(
+                            buffer = buffer,
+                            offset = ipv4Packet.payloadOffset,
+                            availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
+                        ) ?: continue
 
-                val udpDatagram = udpParser.parse(
-                    buffer = buffer,
-                    offset = ipv4Packet.payloadOffset,
-                    availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
-                ) ?: continue
-
-                val now = System.currentTimeMillis()
-                val attribution = connectionOwnerResolver.resolveUdpOwner(
-                    localIp = ipv4Packet.sourceIp,
-                    localPort = udpDatagram.sourcePort,
-                    remoteIp = ipv4Packet.destinationIp,
-                    remotePort = udpDatagram.destinationPort
-                )
-                val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
-                if (isOutgoingDnsQuery) {
-                    val dnsQuestion = dnsParser.parseQuestion(
-                        buffer = buffer,
-                        offset = udpDatagram.payloadOffset,
-                        length = udpDatagram.payloadLength
-                    ) ?: continue
-
-                    if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
-                        continue
-                    }
-                    lastLoggedDnsHost = dnsQuestion.host
-                    lastLoggedDnsAt = now
-
-                    networkEventDao.insert(
-                        NetworkEventEntity(
-                            packageName = attribution.packageName,
-                            appName = attribution.appName,
-                            attributionLabel = attribution.confidenceLabel,
-                            host = dnsQuestion.host,
-                            ipAddress = ipv4Packet.destinationIp,
-                            protocol = "UDP/53",
-                            eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
-                            riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
-                            createdAt = now
+                        val now = System.currentTimeMillis()
+                        val attribution = connectionOwnerResolver.resolveUdpOwner(
+                            localIp = ipv4Packet.sourceIp,
+                            localPort = udpDatagram.sourcePort,
+                            remoteIp = ipv4Packet.destinationIp,
+                            remotePort = udpDatagram.destinationPort
                         )
-                    )
-                    continue
-                }
+                        val isOutgoingDnsQuery = udpDatagram.destinationPort == 53
+                        if (isOutgoingDnsQuery) {
+                            val dnsQuestion = dnsParser.parseQuestion(
+                                buffer = buffer,
+                                offset = udpDatagram.payloadOffset,
+                                length = udpDatagram.payloadLength
+                            ) ?: continue
 
-                val udpSignature = listOf(
-                    attribution.packageName ?: attribution.appName,
-                    ipv4Packet.destinationIp,
-                    udpDatagram.destinationPort.toString()
-                ).joinToString("|")
-                if (udpSignature == lastLoggedUdpSignature && now - lastLoggedUdpAt < 2000L) {
-                    continue
-                }
-                lastLoggedUdpSignature = udpSignature
-                lastLoggedUdpAt = now
+                            if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
+                                continue
+                            }
+                            lastLoggedDnsHost = dnsQuestion.host
+                            lastLoggedDnsAt = now
 
-                networkEventDao.insert(
-                    NetworkEventEntity(
-                        packageName = attribution.packageName,
-                        appName = attribution.appName,
-                        attributionLabel = attribution.confidenceLabel,
-                        host = null,
-                        ipAddress = ipv4Packet.destinationIp,
-                        protocol = "UDP/${udpDatagram.destinationPort}",
-                        eventType = udpEventTypeFor(udpDatagram.destinationPort),
-                        riskLabel = udpRiskLabelFor(udpDatagram.destinationPort),
-                        createdAt = now
-                    )
-                )
+                            networkEventDao.insert(
+                                NetworkEventEntity(
+                                    packageName = attribution.packageName,
+                                    appName = attribution.appName,
+                                    attributionLabel = attribution.confidenceLabel,
+                                    host = dnsQuestion.host,
+                                    ipAddress = ipv4Packet.destinationIp,
+                                    protocol = "UDP/53",
+                                    eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
+                                    riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
+                                    createdAt = now
+                                )
+                            )
+                            continue
+                        }
+
+                        val udpSignature = listOf(
+                            attribution.packageName ?: attribution.appName,
+                            ipv4Packet.destinationIp,
+                            udpDatagram.destinationPort.toString()
+                        ).joinToString("|")
+                        if (udpSignature == lastLoggedUdpSignature && now - lastLoggedUdpAt < 2000L) {
+                            continue
+                        }
+                        lastLoggedUdpSignature = udpSignature
+                        lastLoggedUdpAt = now
+
+                        networkEventDao.insert(
+                            NetworkEventEntity(
+                                packageName = attribution.packageName,
+                                appName = attribution.appName,
+                                attributionLabel = attribution.confidenceLabel,
+                                host = null,
+                                ipAddress = ipv4Packet.destinationIp,
+                                protocol = "UDP/${udpDatagram.destinationPort}",
+                                eventType = udpEventTypeFor(udpDatagram.destinationPort),
+                                riskLabel = udpRiskLabelFor(udpDatagram.destinationPort),
+                                createdAt = now
+                            )
+                        )
+                    }
+
+                    6 -> {
+                        val tcpSegment = tcpParser.parse(
+                            buffer = buffer,
+                            offset = ipv4Packet.payloadOffset,
+                            availableLength = ipv4Packet.totalLength - ipv4Packet.payloadOffset
+                        ) ?: continue
+                        val isOutgoingConnectAttempt = tcpSegment.isSyn && !tcpSegment.isAck
+                        if (!isOutgoingConnectAttempt) continue
+
+                        val now = System.currentTimeMillis()
+                        val attribution = connectionOwnerResolver.resolveTcpOwner(
+                            localIp = ipv4Packet.sourceIp,
+                            localPort = tcpSegment.sourcePort,
+                            remoteIp = ipv4Packet.destinationIp,
+                            remotePort = tcpSegment.destinationPort
+                        )
+                        val tcpSignature = listOf(
+                            attribution.packageName ?: attribution.appName,
+                            ipv4Packet.destinationIp,
+                            tcpSegment.destinationPort.toString()
+                        ).joinToString("|")
+                        if (tcpSignature == lastLoggedTcpSignature && now - lastLoggedTcpAt < 2500L) {
+                            continue
+                        }
+                        lastLoggedTcpSignature = tcpSignature
+                        lastLoggedTcpAt = now
+
+                        networkEventDao.insert(
+                            NetworkEventEntity(
+                                packageName = attribution.packageName,
+                                appName = attribution.appName,
+                                attributionLabel = attribution.confidenceLabel,
+                                host = null,
+                                ipAddress = ipv4Packet.destinationIp,
+                                protocol = "TCP/${tcpSegment.destinationPort}",
+                                eventType = tcpEventTypeFor(tcpSegment.destinationPort),
+                                riskLabel = tcpRiskLabelFor(tcpSegment.destinationPort),
+                                createdAt = now
+                            )
+                        )
+                    }
+
+                    else -> continue
+                }
             }
         }
+    }
+
+    private fun tcpEventTypeFor(destinationPort: Int): String = when (destinationPort) {
+        443 -> "TCP_HTTPS_CONNECT"
+        80 -> "TCP_HTTP_CONNECT"
+        5228, 5229, 5230 -> "TCP_PUSH_CONNECT"
+        else -> "TCP_APP_CONNECT"
+    }
+
+    private fun tcpRiskLabelFor(destinationPort: Int): String = when (destinationPort) {
+        80 -> "Observed"
+        443 -> "Routine"
+        5228, 5229, 5230 -> "Routine"
+        else -> "Observed"
     }
 
     private fun udpEventTypeFor(destinationPort: Int): String = when (destinationPort) {
@@ -293,11 +356,11 @@ class LocalVpnService : VpnService() {
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
-            .setContentTitle("SecureGuard Protection")
+            .setContentTitle("SecureGuard 保護中")
             .setContentText(contentText)
-            .setSubText("Local on-device analysis")
+            .setSubText("裝置端本機分析")
             .setContentIntent(pendingIntent)
-            .addAction(0, "Stop", stopIntent)
+            .addAction(0, "停止", stopIntent)
             .setCategory(CATEGORY_SERVICE)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
@@ -309,10 +372,10 @@ class LocalVpnService : VpnService() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            "SecureGuard Protection",
+            "SecureGuard 保護中",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Foreground notification for SecureGuard local protection mode."
+            description = "SecureGuard 本機保護模式的前景通知。"
         }
         manager.createNotificationChannel(channel)
     }
@@ -326,7 +389,7 @@ class LocalVpnService : VpnService() {
         private val _serviceState = MutableStateFlow(VpnProtectionState.Off)
         val serviceState = _serviceState.asStateFlow()
 
-        private val _statusMessage = MutableStateFlow("Protection mode is off. Turn it on when you want local network monitoring.")
+        private val _statusMessage = MutableStateFlow("保護模式已關閉。要開始本機網路監看時再開啟即可。")
         val statusMessage = _statusMessage.asStateFlow()
 
         fun startIntent(context: Context): Intent {
