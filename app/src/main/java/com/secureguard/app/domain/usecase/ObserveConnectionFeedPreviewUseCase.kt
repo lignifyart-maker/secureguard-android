@@ -23,8 +23,8 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_ERROR" -> "Protection mode needs attention"
                         else -> {
                             when (mostRecent.riskLabel) {
-                                "Tracker" -> "$appName may be contacting a tracker"
-                                "Sensitive" -> "$appName checked a sensitive domain"
+                                "Tracker" -> "A tracking-style domain was contacted"
+                                "Sensitive" -> "A more sensitive service was contacted"
                                 else -> "$appName checked $target"
                             }
                         }
@@ -33,7 +33,11 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
                         "VPN_STOPPED" -> "Local protection mode was turned off."
                         "VPN_ERROR" -> "SecureGuard could not keep the local tunnel alive."
-                        else -> "${describeQueryEvent(mostRecent.eventType)} / ${humanizeRisk(mostRecent.riskLabel)}"
+                        else -> when (mostRecent.riskLabel) {
+                            "Tracker" -> "$appName asked about $target, which looks like tracking or ad traffic."
+                            "Sensitive" -> "$appName checked $target, which touches a more sensitive service."
+                            else -> "${describeQueryEvent(mostRecent.eventType)} / ${humanizeRisk(mostRecent.riskLabel)}"
+                        }
                     }
                     ConnectionFeedPreview(
                         title = title,
