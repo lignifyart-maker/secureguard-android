@@ -45,11 +45,13 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         "Routine" -> "This looks routine, so you usually do not need to act on it."
                         else -> "Keep an eye on this feed if you want a better sense of what your phone is doing."
                     }
+                    val activityLabel = activityLabelFor(events.size)
                     ConnectionFeedPreview(
                         title = title,
                         targetLabel = target,
                         detail = detail,
                         actionHint = actionHint,
+                        activityLabel = activityLabel,
                         riskLabel = mostRecent.riskLabel,
                         relativeTime = relativeTimeFrom(mostRecent.createdAt),
                         recentCount = events.size
@@ -61,6 +63,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         targetLabel = "Waiting for the first target",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
                         actionHint = "Leave protection mode on for a moment and this card will start to fill in.",
+                        activityLabel = "Quiet",
                         riskLabel = "Ready",
                         relativeTime = "now",
                         recentCount = 0
@@ -71,6 +74,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         targetLabel = "Tunnel is still warming up",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
                         actionHint = "Give it a few seconds before expecting any live event hints.",
+                        activityLabel = "Warming up",
                         riskLabel = "Starting",
                         relativeTime = "now",
                         recentCount = 0
@@ -81,6 +85,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                         targetLabel = "No target yet",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
                         actionHint = "When you want a calm traffic overview, turn protection mode on first.",
+                        activityLabel = "Idle",
                         riskLabel = "Idle",
                         relativeTime = "waiting",
                         recentCount = 0
@@ -102,6 +107,13 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_CNAME_QUERY" -> "followed a domain alias"
         "DNS_MX_QUERY" -> "looked up mail routing"
         else -> "generated a DNS lookup"
+    }
+
+    private fun activityLabelFor(recentCount: Int): String = when {
+        recentCount <= 1 -> "Quiet"
+        recentCount <= 4 -> "Light activity"
+        recentCount <= 8 -> "Busy"
+        else -> "Very busy"
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {

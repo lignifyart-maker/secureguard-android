@@ -389,6 +389,10 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 text = preview.riskLabel,
                 color = connectionFeedAccent(preview.riskLabel)
             )
+            RiskBadgeText(
+                text = preview.activityLabel,
+                color = activityAccent(preview.activityLabel)
+            )
             Text(
                 text = preview.title,
                 style = MaterialTheme.typography.titleSmall,
@@ -1208,6 +1212,15 @@ private fun connectionFeedAccent(label: String): Color = when (label) {
     "Routine" -> Color(0xFF4A8C69)
     "Ready" -> Color(0xFF4A8C69)
     "Starting" -> Color(0xFFB27A1F)
+    else -> Color(0xFF6F7C92)
+}
+
+private fun activityAccent(label: String): Color = when (label) {
+    "Quiet" -> Color(0xFF4A8C69)
+    "Light activity" -> Color(0xFF7B9E68)
+    "Busy" -> Color(0xFFDD8B42)
+    "Very busy" -> Color(0xFFC55A54)
+    "Warming up" -> Color(0xFFB27A1F)
     else -> Color(0xFF6F7C92)
 }
 
