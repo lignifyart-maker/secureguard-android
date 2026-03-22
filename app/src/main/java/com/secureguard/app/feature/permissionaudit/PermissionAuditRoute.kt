@@ -494,6 +494,11 @@ private fun ProtectionModeCard(
                 color = protectionAccentColor(state)
             )
             Text(
+                text = protectionHelperText(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
                 text = statusMessage,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -1340,6 +1345,13 @@ private fun protectionAccentColor(state: VpnProtectionState): Color = when (stat
     VpnProtectionState.Starting -> Color(0xFFB27A1F)
     VpnProtectionState.On -> Color(0xFF4A8C69)
     VpnProtectionState.Error -> Color(0xFFC55A54)
+}
+
+private fun protectionHelperText(state: VpnProtectionState): String = when (state) {
+    VpnProtectionState.Off -> "Turn this on when you want local DNS and VPN activity hints."
+    VpnProtectionState.Starting -> "SecureGuard is opening the local tunnel and preparing the first events."
+    VpnProtectionState.On -> "Protection mode is actively collecting lightweight on-device event signals."
+    VpnProtectionState.Error -> "Something interrupted local protection mode, so event hints may pause until it starts again."
 }
 
 private fun connectionFeedAccent(label: String): Color = when (label) {
