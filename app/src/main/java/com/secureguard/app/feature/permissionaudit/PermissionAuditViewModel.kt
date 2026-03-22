@@ -5,12 +5,15 @@ import androidx.lifecycle.viewModelScope
 import com.secureguard.app.core.datastore.SettingsDataStore
 import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
 import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
+import com.secureguard.app.domain.usecase.ObserveConnectionFeedPreviewUseCase
 import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
+import com.secureguard.app.domain.model.VpnProtectionState
 import com.secureguard.app.vpn.LocalVpnService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.DateFormat
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,10 +26,12 @@ class PermissionAuditViewModel @Inject constructor(
     private val scanInstalledAppsUseCase: ScanInstalledAppsUseCase,
     private val getWifiSecuritySnapshotUseCase: GetWifiSecuritySnapshotUseCase,
     private val buildSecurityOverviewUseCase: BuildSecurityOverviewUseCase,
+    private val observeConnectionFeedPreviewUseCase: ObserveConnectionFeedPreviewUseCase,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PermissionAuditUiState())
     val uiState: StateFlow<PermissionAuditUiState> = _uiState.asStateFlow()
+    private var connectionFeedJob: Job? = null
 
     init {
         observeLastScan()
@@ -118,12 +123,24 @@ class PermissionAuditViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(vpnProtectionState = state)
                 }
+                observeConnectionFeed(state)
             }
         }
         viewModelScope.launch {
             LocalVpnService.statusMessage.collect { message ->
                 _uiState.update { current ->
                     current.copy(vpnStatusMessage = message)
+                }
+            }
+        }
+    }
+
+    private fun observeConnectionFeed(vpnState: VpnProtectionState) {
+        connectionFeedJob?.cancel()
+        connectionFeedJob = viewModelScope.launch {
+            observeConnectionFeedPreviewUseCase(vpnState).collect { preview ->
+                _uiState.update { current ->
+                    current.copy(connectionFeedPreview = preview)
                 }
             }
         }
