@@ -52,6 +52,7 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
 
     private fun humanizeAttribution(label: String): String = when (label) {
         "Mapped from Android owner lookup" -> "Android matched this app"
+        "Matched from recent port history" -> "SecureGuard reused a very recent app match"
         "Owner not mapped yet" -> "Android has not mapped it yet"
         "UID resolved without package" -> "UID matched without a package name"
         "Address parse failed" -> "Address details were incomplete"
@@ -60,6 +61,7 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
 
     private fun attributionStateLabel(label: String?): String = when (label) {
         "Mapped from Android owner lookup" -> "Mapped"
+        "Matched from recent port history" -> "Recovered"
         "Owner not mapped yet" -> "Pending"
         "UID resolved without package" -> "Partial"
         "Address parse failed" -> "Fallback"

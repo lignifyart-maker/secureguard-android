@@ -147,6 +147,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
 
     private fun humanizeAttribution(label: String): String = when (label) {
         "Mapped from Android owner lookup" -> "Android matched this app"
+        "Matched from recent port history" -> "SecureGuard reused a very recent app match"
         "Owner not mapped yet" -> "Android has not mapped it yet"
         "UID resolved without package" -> "Android resolved a UID but no package name"
         "Address parse failed" -> "Address details were incomplete"
