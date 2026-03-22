@@ -34,6 +34,7 @@ data class PermissionAuditUiState(
                 detail = "A few calm, high-impact tips will show up here after the scan finishes."
             )
         ),
-        watchApps = emptyList()
+        watchApps = emptyList(),
+        closeCandidates = emptyList()
     )
 )

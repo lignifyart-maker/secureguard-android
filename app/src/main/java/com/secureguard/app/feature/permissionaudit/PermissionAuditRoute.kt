@@ -214,6 +214,12 @@ private fun AuditContent(
             SecuritySuggestionCard(overview = state.securityOverview)
         }
 
+        if (state.securityOverview.closeCandidates.isNotEmpty()) {
+            item {
+                CloseCandidatesCard(apps = state.securityOverview.closeCandidates)
+            }
+        }
+
         item {
             WifiSafetyCard(snapshot = state.wifiSnapshot)
         }
@@ -453,6 +459,54 @@ private fun SecuritySuggestionCard(overview: SecurityOverview) {
             )
             overview.suggestions.forEach { suggestion ->
                 SuggestionRow(suggestion = suggestion)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CloseCandidatesCard(apps: List<AppScanResult>) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Safe to close first",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "These look more like optional utility apps than core phone tools, so they are good first candidates to review or close when you want a lighter phone.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            apps.forEach { app ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = app.appName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = app.riskReasons.joinToString(separator = " / "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

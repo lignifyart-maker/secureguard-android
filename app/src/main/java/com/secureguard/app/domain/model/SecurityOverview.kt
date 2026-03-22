@@ -5,5 +5,6 @@ data class SecurityOverview(
     val headline: String,
     val summary: String,
     val suggestions: List<SecuritySuggestion>,
-    val watchApps: List<AppScanResult>
+    val watchApps: List<AppScanResult>,
+    val closeCandidates: List<AppScanResult>
 )

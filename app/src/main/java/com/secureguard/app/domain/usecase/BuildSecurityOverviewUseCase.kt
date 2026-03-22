@@ -91,14 +91,62 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             .sortedWith(compareByDescending<AppScanResult> { it.riskLevel.score }.thenBy { it.appName })
             .take(3)
 
+        val closeCandidates = apps
+            .filter { app -> looksSafeToCloseFirst(app) }
+            .sortedWith(compareByDescending<AppScanResult> { it.riskLevel.score }.thenBy { it.appName })
+            .take(3)
+
         return SecurityOverview(
             score = score,
             headline = headline,
             summary = summary,
             suggestions = suggestions,
-            watchApps = watchApps
+            watchApps = watchApps,
+            closeCandidates = closeCandidates
         )
     }
 
     private fun plural(count: Int): String = if (count == 1) "" else "s"
+
+    private fun looksSafeToCloseFirst(app: AppScanResult): Boolean {
+        val haystack = "${app.appName} ${app.packageName}".lowercase()
+        val probablyOptional = optionalKeywords.any { keyword -> keyword in haystack }
+        val definitelyCore = coreKeywords.any { keyword -> keyword in haystack }
+        if (definitelyCore) return false
+        if (!probablyOptional) return false
+        return app.riskLevel == RiskLevel.Critical ||
+            app.riskLevel == RiskLevel.High ||
+            app.riskyPermissions.isNotEmpty()
+    }
+
+    private companion object {
+        val optionalKeywords = listOf(
+            "flashlight",
+            "torch",
+            "cleaner",
+            "booster",
+            "scanner",
+            "weather",
+            "wallpaper",
+            "battery",
+            "compass",
+            "calculator",
+            "junk",
+            "optimizer"
+        )
+
+        val coreKeywords = listOf(
+            "phone",
+            "dialer",
+            "message",
+            "sms",
+            "camera",
+            "launcher",
+            "system",
+            "bank",
+            "wallet",
+            "maps",
+            "mail"
+        )
+    }
 }
