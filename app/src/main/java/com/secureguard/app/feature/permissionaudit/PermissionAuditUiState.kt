@@ -22,7 +22,8 @@ data class PermissionAuditUiState(
         title = "No live connections yet",
         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
         riskLabel = "Idle",
-        relativeTime = "waiting"
+        relativeTime = "waiting",
+        recentCount = 0
     ),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
