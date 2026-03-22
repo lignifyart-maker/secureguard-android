@@ -138,10 +138,19 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
 
     private fun sourceLabelFor(appName: String, attributionLabel: String?): String = when {
         appName == "SecureGuard" -> "Source: SecureGuard"
-        appName == "Unknown app" && !attributionLabel.isNullOrBlank() -> "Source: app not mapped yet / $attributionLabel"
+        appName == "Unknown app" && !attributionLabel.isNullOrBlank() ->
+            "Source: app not mapped yet / ${humanizeAttribution(attributionLabel)}"
         appName == "Unknown app" -> "Source: app not mapped yet"
-        !attributionLabel.isNullOrBlank() -> "Source: $appName / $attributionLabel"
+        !attributionLabel.isNullOrBlank() -> "Source: $appName / ${humanizeAttribution(attributionLabel)}"
         else -> "Source: $appName"
+    }
+
+    private fun humanizeAttribution(label: String): String = when (label) {
+        "Mapped from Android owner lookup" -> "Android matched this app"
+        "Owner not mapped yet" -> "Android has not mapped it yet"
+        "UID resolved without package" -> "Android resolved a UID but no package name"
+        "Address parse failed" -> "Address details were incomplete"
+        else -> label
     }
 
     private fun activityLabelFor(recentCount: Int): String = when {

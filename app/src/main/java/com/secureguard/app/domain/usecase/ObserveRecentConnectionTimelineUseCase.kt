@@ -20,7 +20,9 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
                         sourceLabel = event.appName ?: "Unknown app",
                         riskLabel = event.riskLabel,
                         eventLabel = eventLabelFor(event.eventType),
-                        attributionLabel = event.attributionLabel ?: "Attribution not available",
+                        attributionLabel = humanizeAttribution(
+                            event.attributionLabel ?: "Attribution not available"
+                        ),
                         relativeTime = relativeTimeFrom(event.createdAt)
                     )
                 }
@@ -44,6 +46,14 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
         "DNS_CNAME_QUERY" -> "Alias lookup"
         "DNS_MX_QUERY" -> "Mail lookup"
         else -> "DNS lookup"
+    }
+
+    private fun humanizeAttribution(label: String): String = when (label) {
+        "Mapped from Android owner lookup" -> "Android matched this app"
+        "Owner not mapped yet" -> "Android has not mapped it yet"
+        "UID resolved without package" -> "UID matched without a package name"
+        "Address parse failed" -> "Address details were incomplete"
+        else -> label
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {
