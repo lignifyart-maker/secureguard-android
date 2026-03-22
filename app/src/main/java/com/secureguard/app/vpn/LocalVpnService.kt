@@ -20,7 +20,13 @@ import com.secureguard.app.core.di.NetworkEventEntryPoint
 import com.secureguard.app.core.di.VpnRuntimeEntryPoint
 import com.secureguard.app.domain.model.VpnProtectionState
 import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.SocketTimeoutException
+import java.util.LinkedHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,12 +41,9 @@ class LocalVpnService : VpnService() {
     private var tunnelInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var readLoopJob: Job? = null
-    private var lastLoggedDnsHost: String? = null
-    private var lastLoggedDnsAt: Long = 0L
-    private var lastLoggedUdpSignature: String? = null
-    private var lastLoggedUdpAt: Long = 0L
-    private var lastLoggedTcpSignature: String? = null
-    private var lastLoggedTcpAt: Long = 0L
+    private val recentDnsSignatures = recentSignatureCache()
+    private val recentUdpSignatures = recentSignatureCache()
+    private val recentTcpSignatures = recentSignatureCache()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -77,7 +80,7 @@ class LocalVpnService : VpnService() {
             val builder = Builder()
                 .setSession("SecureGuard Local Protection")
                 .addAddress("10.42.0.2", 32)
-            addDnsRoutes(builder)
+            configureDnsRouting(builder)
             builder.establish()
         }.onSuccess { parcelFileDescriptor ->
             if (parcelFileDescriptor != null) {
@@ -163,6 +166,7 @@ class LocalVpnService : VpnService() {
         readLoopJob?.cancel()
         readLoopJob = serviceScope.launch {
             val inputStream = FileInputStream(parcelFileDescriptor.fileDescriptor)
+            val outputStream = FileOutputStream(parcelFileDescriptor.fileDescriptor)
             val runtimeEntryPoint = EntryPointAccessors.fromApplication(
                 applicationContext,
                 VpnRuntimeEntryPoint::class.java
@@ -204,11 +208,14 @@ class LocalVpnService : VpnService() {
                                 length = udpDatagram.payloadLength
                             ) ?: continue
 
-                            if (dnsQuestion.host == lastLoggedDnsHost && now - lastLoggedDnsAt < 1500L) {
+                            val dnsSignature = listOf(
+                                attribution.packageName ?: attribution.appName,
+                                dnsQuestion.host,
+                                dnsQuestion.queryTypeLabel
+                            ).joinToString("|")
+                            if (shouldSkipRecent(recentDnsSignatures, dnsSignature, now, DNS_DEDUPE_WINDOW_MS)) {
                                 continue
                             }
-                            lastLoggedDnsHost = dnsQuestion.host
-                            lastLoggedDnsAt = now
 
                             networkEventDao.insert(
                                 NetworkEventEntity(
@@ -223,6 +230,17 @@ class LocalVpnService : VpnService() {
                                     createdAt = now
                                 )
                             )
+                            relayDnsQuery(
+                                payload = buffer.copyOfRange(
+                                    udpDatagram.payloadOffset,
+                                    udpDatagram.payloadOffset + udpDatagram.payloadLength
+                                ),
+                                sourceIp = ipv4Packet.sourceIp,
+                                destinationIp = ipv4Packet.destinationIp,
+                                sourcePort = udpDatagram.sourcePort,
+                                destinationPort = udpDatagram.destinationPort,
+                                outputStream = outputStream
+                            )
                             continue
                         }
 
@@ -231,11 +249,9 @@ class LocalVpnService : VpnService() {
                             ipv4Packet.destinationIp,
                             udpDatagram.destinationPort.toString()
                         ).joinToString("|")
-                        if (udpSignature == lastLoggedUdpSignature && now - lastLoggedUdpAt < 2000L) {
+                        if (shouldSkipRecent(recentUdpSignatures, udpSignature, now, UDP_DEDUPE_WINDOW_MS)) {
                             continue
                         }
-                        lastLoggedUdpSignature = udpSignature
-                        lastLoggedUdpAt = now
 
                         networkEventDao.insert(
                             NetworkEventEntity(
@@ -273,11 +289,9 @@ class LocalVpnService : VpnService() {
                             ipv4Packet.destinationIp,
                             tcpSegment.destinationPort.toString()
                         ).joinToString("|")
-                        if (tcpSignature == lastLoggedTcpSignature && now - lastLoggedTcpAt < 2500L) {
+                        if (shouldSkipRecent(recentTcpSignatures, tcpSignature, now, TCP_DEDUPE_WINDOW_MS)) {
                             continue
                         }
-                        lastLoggedTcpSignature = tcpSignature
-                        lastLoggedTcpAt = now
 
                         networkEventDao.insert(
                             NetworkEventEntity(
@@ -328,15 +342,183 @@ class LocalVpnService : VpnService() {
         else -> "Observed"
     }
 
-    private fun addDnsRoutes(builder: Builder) {
+    private fun configureDnsRouting(builder: Builder) {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val linkProperties: LinkProperties = connectivityManager.getLinkProperties(connectivityManager.activeNetwork)
             ?: return
         linkProperties.dnsServers
             .filterIsInstance<Inet4Address>()
             .forEach { dnsServer ->
+                builder.addDnsServer(dnsServer)
                 builder.addRoute(dnsServer.hostAddress ?: return@forEach, 32)
             }
+    }
+
+    @Synchronized
+    private fun shouldSkipRecent(
+        cache: LinkedHashMap<String, Long>,
+        signature: String,
+        now: Long,
+        windowMs: Long
+    ): Boolean {
+        val previous = cache[signature]
+        cache[signature] = now
+        return previous != null && now - previous < windowMs
+    }
+
+    private fun recentSignatureCache(): LinkedHashMap<String, Long> =
+        object : LinkedHashMap<String, Long>(RECENT_SIGNATURE_CACHE_SIZE, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean {
+                return size > RECENT_SIGNATURE_CACHE_SIZE
+            }
+        }
+
+    private fun relayDnsQuery(
+        payload: ByteArray,
+        sourceIp: String,
+        destinationIp: String,
+        sourcePort: Int,
+        destinationPort: Int,
+        outputStream: FileOutputStream
+    ) {
+        runCatching {
+            val remoteAddress = InetAddress.getByName(destinationIp)
+            DatagramSocket().use { socket ->
+                protect(socket)
+                socket.soTimeout = DNS_TIMEOUT_MS.toInt()
+                socket.connect(remoteAddress, destinationPort)
+                socket.send(DatagramPacket(payload, payload.size))
+
+                val responseBuffer = ByteArray(4096)
+                val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
+                socket.receive(responsePacket)
+
+                val packetBytes = buildIpv4UdpPacket(
+                    sourceIp = destinationIp,
+                    destinationIp = sourceIp,
+                    sourcePort = destinationPort,
+                    destinationPort = sourcePort,
+                    payload = responsePacket.data.copyOf(responsePacket.length)
+                )
+                synchronized(outputStream) {
+                    outputStream.write(packetBytes)
+                    outputStream.flush()
+                }
+            }
+        }.onFailure { error ->
+            if (error !is SocketTimeoutException) {
+                _statusMessage.value = "有一筆 DNS 查詢沒有順利送出去。"
+            }
+        }
+    }
+
+    private fun buildIpv4UdpPacket(
+        sourceIp: String,
+        destinationIp: String,
+        sourcePort: Int,
+        destinationPort: Int,
+        payload: ByteArray
+    ): ByteArray {
+        val ipHeaderLength = 20
+        val udpHeaderLength = 8
+        val totalLength = ipHeaderLength + udpHeaderLength + payload.size
+        val packet = ByteArray(totalLength)
+
+        packet[0] = 0x45
+        packet[1] = 0
+        writeShort(packet, 2, totalLength)
+        writeShort(packet, 4, 0)
+        writeShort(packet, 6, 0)
+        packet[8] = 64
+        packet[9] = 17
+        writeIpv4(packet, 12, sourceIp)
+        writeIpv4(packet, 16, destinationIp)
+        writeShort(packet, 10, ipv4Checksum(packet, 0, ipHeaderLength))
+
+        writeShort(packet, 20, sourcePort)
+        writeShort(packet, 22, destinationPort)
+        writeShort(packet, 24, udpHeaderLength + payload.size)
+        writeShort(packet, 26, 0)
+        payload.copyInto(packet, destinationOffset = 28)
+        writeShort(
+            packet,
+            26,
+            udpChecksum(
+                packet = packet,
+                sourceIpOffset = 12,
+                destinationIpOffset = 16,
+                udpOffset = 20,
+                udpLength = udpHeaderLength + payload.size
+            )
+        )
+
+        return packet
+    }
+
+    private fun writeIpv4(packet: ByteArray, offset: Int, ipAddress: String) {
+        val octets = ipAddress.split('.')
+        require(octets.size == 4) { "Invalid IPv4 address: $ipAddress" }
+        octets.forEachIndexed { index, part ->
+            packet[offset + index] = part.toInt().toByte()
+        }
+    }
+
+    private fun writeShort(packet: ByteArray, offset: Int, value: Int) {
+        packet[offset] = ((value ushr 8) and 0xFF).toByte()
+        packet[offset + 1] = (value and 0xFF).toByte()
+    }
+
+    private fun ipv4Checksum(packet: ByteArray, offset: Int, headerLength: Int): Int {
+        var sum = 0L
+        var cursor = offset
+        while (cursor < offset + headerLength) {
+            if (cursor == offset + 10) {
+                cursor += 2
+                continue
+            }
+            sum += readUnsignedShort(packet, cursor).toLong()
+            cursor += 2
+        }
+        return finalizeChecksum(sum)
+    }
+
+    private fun udpChecksum(
+        packet: ByteArray,
+        sourceIpOffset: Int,
+        destinationIpOffset: Int,
+        udpOffset: Int,
+        udpLength: Int
+    ): Int {
+        var sum = 0L
+        sum += readUnsignedShort(packet, sourceIpOffset).toLong()
+        sum += readUnsignedShort(packet, sourceIpOffset + 2).toLong()
+        sum += readUnsignedShort(packet, destinationIpOffset).toLong()
+        sum += readUnsignedShort(packet, destinationIpOffset + 2).toLong()
+        sum += 17L
+        sum += udpLength.toLong()
+
+        var cursor = udpOffset
+        while (cursor < udpOffset + udpLength - 1) {
+            sum += readUnsignedShort(packet, cursor).toLong()
+            cursor += 2
+        }
+        if (udpLength % 2 != 0) {
+            sum += ((packet[udpOffset + udpLength - 1].toInt() and 0xFF) shl 8).toLong()
+        }
+        val checksum = finalizeChecksum(sum)
+        return if (checksum == 0) 0xFFFF else checksum
+    }
+
+    private fun finalizeChecksum(initialSum: Long): Int {
+        var sum = initialSum
+        while ((sum ushr 16) != 0L) {
+            sum = (sum and 0xFFFF) + (sum ushr 16)
+        }
+        return sum.inv().toInt() and 0xFFFF
+    }
+
+    private fun readUnsignedShort(packet: ByteArray, offset: Int): Int {
+        return ((packet[offset].toInt() and 0xFF) shl 8) or (packet[offset + 1].toInt() and 0xFF)
     }
 
     private fun buildNotification(contentText: String): Notification {
@@ -385,6 +567,11 @@ class LocalVpnService : VpnService() {
         const val ACTION_STOP = "com.secureguard.app.vpn.action.STOP"
         private const val NOTIFICATION_CHANNEL_ID = "secureguard_protection"
         private const val NOTIFICATION_ID = 3001
+        private const val DNS_TIMEOUT_MS = 1_500L
+        private const val DNS_DEDUPE_WINDOW_MS = 1_500L
+        private const val UDP_DEDUPE_WINDOW_MS = 2_000L
+        private const val TCP_DEDUPE_WINDOW_MS = 2_500L
+        private const val RECENT_SIGNATURE_CACHE_SIZE = 128
 
         private val _serviceState = MutableStateFlow(VpnProtectionState.Off)
         val serviceState = _serviceState.asStateFlow()
