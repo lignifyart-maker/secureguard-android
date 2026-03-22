@@ -166,6 +166,7 @@ class LocalVpnService : VpnService() {
             val udpParser = runtimeEntryPoint.udpDatagramParser()
             val dnsParser = runtimeEntryPoint.dnsPacketParser()
             val domainRiskClassifier = runtimeEntryPoint.domainRiskClassifier()
+            val connectionOwnerResolver = runtimeEntryPoint.connectionOwnerResolver()
             val networkEventDao = runtimeEntryPoint.networkEventDao()
             val buffer = ByteArray(32767)
 
@@ -197,11 +198,17 @@ class LocalVpnService : VpnService() {
                 }
                 lastLoggedDnsHost = dnsQuestion.host
                 lastLoggedDnsAt = now
+                val attribution = connectionOwnerResolver.resolveUdpOwner(
+                    sourceIp = ipv4Packet.sourceIp,
+                    sourcePort = udpDatagram.sourcePort,
+                    destinationIp = ipv4Packet.destinationIp,
+                    destinationPort = udpDatagram.destinationPort
+                )
 
                 networkEventDao.insert(
                     NetworkEventEntity(
-                        packageName = null,
-                        appName = "Unknown app",
+                        packageName = attribution.packageName,
+                        appName = attribution.appName,
                         host = dnsQuestion.host,
                         ipAddress = ipv4Packet.destinationIp,
                         protocol = "UDP/53",
