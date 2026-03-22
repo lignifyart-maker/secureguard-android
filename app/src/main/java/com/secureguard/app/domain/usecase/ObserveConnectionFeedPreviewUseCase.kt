@@ -32,26 +32,30 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     ConnectionFeedPreview(
                         title = title,
                         detail = detail,
-                        riskLabel = mostRecent.riskLabel
+                        riskLabel = mostRecent.riskLabel,
+                        relativeTime = relativeTimeFrom(mostRecent.createdAt)
                     )
                 }
                 vpnState == VpnProtectionState.On ->
                     ConnectionFeedPreview(
                         title = "Listening for new traffic",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
-                        riskLabel = "Ready"
+                        riskLabel = "Ready",
+                        relativeTime = "now"
                     )
                 vpnState == VpnProtectionState.Starting ->
                     ConnectionFeedPreview(
                         title = "Protection is starting",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
-                        riskLabel = "Starting"
+                        riskLabel = "Starting",
+                        relativeTime = "now"
                     )
                 else ->
                     ConnectionFeedPreview(
                         title = "No live connections yet",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
-                        riskLabel = "Idle"
+                        riskLabel = "Idle",
+                        relativeTime = "waiting"
                     )
             }
         }
@@ -70,5 +74,15 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_CNAME_QUERY" -> "followed a domain alias"
         "DNS_MX_QUERY" -> "looked up mail routing"
         else -> "generated a DNS lookup"
+    }
+
+    private fun relativeTimeFrom(createdAt: Long): String {
+        val seconds = ((System.currentTimeMillis() - createdAt) / 1000).coerceAtLeast(0)
+        return when {
+            seconds < 5 -> "just now"
+            seconds < 60 -> "${seconds}s ago"
+            seconds < 3600 -> "${seconds / 60}m ago"
+            else -> "${seconds / 3600}h ago"
+        }
     }
 }
