@@ -39,6 +39,16 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
             score >= 55 -> "Needs attention"
             else -> "Tidy-up needed"
         }
+        val scoreDetail = when {
+            wifiSnapshot.safetyLevel == WifiSafetyLevel.Risky ->
+                "Open Wi-Fi is pulling your score down more than the installed apps right now."
+            criticalCount > 0 ->
+                "A few permission-heavy apps are the main reason this score is not higher."
+            highCount > 0 || mediumCount > 0 ->
+                "Most of the score drop comes from apps that want more access than they probably need."
+            else ->
+                "Your score is mostly being held up by a calm app scan and a non-alarming network check."
+        }
 
         val summary = when {
             criticalCount > 0 ->
@@ -128,6 +138,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
         return SecurityOverview(
             score = score,
             scoreBandLabel = scoreBandLabel,
+            scoreDetail = scoreDetail,
             headline = headline,
             summary = summary,
             primaryActionTitle = primaryAction.first,

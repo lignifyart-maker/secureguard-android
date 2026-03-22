@@ -562,7 +562,8 @@ private fun HeroCard(
             )
             ScoreBubble(
                 score = overview.score,
-                scoreBandLabel = overview.scoreBandLabel
+                scoreBandLabel = overview.scoreBandLabel,
+                scoreDetail = overview.scoreDetail
             )
             Text(
                 text = "$notableApps of $totalApps apps are worth a second look. Last scan: $lastScanLabel",
@@ -586,7 +587,8 @@ private fun HeroCard(
 @Composable
 private fun ScoreBubble(
     score: Int,
-    scoreBandLabel: String
+    scoreBandLabel: String,
+    scoreDetail: String
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
@@ -611,9 +613,16 @@ private fun ScoreBubble(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
+            Text(
+                text = overviewScoreHint(scoreDetail = scoreDetail),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
+private fun overviewScoreHint(scoreDetail: String): String = scoreDetail
 
 @Composable
 private fun PrimaryActionCard(overview: SecurityOverview) {

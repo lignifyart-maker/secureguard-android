@@ -54,6 +54,7 @@ data class PermissionAuditUiState(
     val securityOverview: SecurityOverview = SecurityOverview(
         score = 72,
         scoreBandLabel = "Preparing",
+        scoreDetail = "SecureGuard is still gathering the signals behind your score.",
         headline = "Checking your phone's safety rhythm",
         summary = "SecureGuard is preparing a simple overview of what matters most.",
         primaryActionTitle = "Preparing the best next step",
