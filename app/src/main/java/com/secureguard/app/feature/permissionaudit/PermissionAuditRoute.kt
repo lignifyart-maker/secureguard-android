@@ -840,6 +840,11 @@ private fun SuggestionRow(suggestion: SecuritySuggestion) {
                 color = suggestionPriorityColor(suggestion.priorityLabel)
             )
             Text(
+                text = suggestion.categoryLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
                 text = suggestion.title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold

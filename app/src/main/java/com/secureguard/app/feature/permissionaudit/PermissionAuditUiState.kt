@@ -61,6 +61,7 @@ data class PermissionAuditUiState(
             SecuritySuggestion(
                 title = "Preparing suggestions",
                 detail = "A few calm, high-impact tips will show up here after the scan finishes.",
+                categoryLabel = "Overview",
                 priorityLabel = "Preparing"
             )
         ),

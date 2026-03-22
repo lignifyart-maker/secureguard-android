@@ -66,6 +66,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
                     SecuritySuggestion(
                         title = "Avoid sensitive logins on this Wi-Fi",
                         detail = "Open networks are fine for casual browsing, but avoid banking or password changes here.",
+                        categoryLabel = "Network",
                         priorityLabel = "Do now"
                     )
                 )
@@ -79,6 +80,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
                     SecuritySuggestion(
                         title = "Review ${suspiciousUtility.appName}",
                         detail = suspiciousUtility.riskReasons.joinToString(separator = " / "),
+                        categoryLabel = "Permissions",
                         priorityLabel = "Do now"
                     )
                 )
@@ -90,6 +92,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
                     SecuritySuggestion(
                         title = "Trim microphone access",
                         detail = "$microphoneCount app${plural(microphoneCount)} asked for microphone access. Keep only the ones you truly use.",
+                        categoryLabel = "Permissions",
                         priorityLabel = "Soon"
                     )
                 )
@@ -100,6 +103,7 @@ class BuildSecurityOverviewUseCase @Inject constructor() {
                     SecuritySuggestion(
                         title = "You can relax a bit",
                         detail = "There are no standout high-risk apps in this scan, so your next check can stay lightweight.",
+                        categoryLabel = "Overview",
                         priorityLabel = "Good to know"
                     )
                 )
