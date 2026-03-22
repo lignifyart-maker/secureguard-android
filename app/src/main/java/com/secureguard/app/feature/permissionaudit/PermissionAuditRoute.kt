@@ -1,5 +1,8 @@
 package com.secureguard.app.feature.permissionaudit
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,9 +61,20 @@ fun PermissionAuditRoute(
     viewModel: PermissionAuditViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) {
+        viewModel.refresh()
+    }
     PermissionAuditScreen(
         state = uiState,
-        onRefresh = viewModel::refresh
+        onRefresh = viewModel::refresh,
+        onRequestWifiPermission = {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        },
+        onTrustNetwork = { trusted ->
+            viewModel.setWifiTrusted(trusted)
+        }
     )
 }
 
@@ -68,7 +82,9 @@ fun PermissionAuditRoute(
 @Composable
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onRequestWifiPermission: () -> Unit,
+    onTrustNetwork: (Boolean) -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -99,7 +115,9 @@ private fun PermissionAuditScreen(
             else -> AuditContent(
                 state = state,
                 innerPadding = innerPadding,
-                onRefresh = onRefresh
+                onRefresh = onRefresh,
+                onRequestWifiPermission = onRequestWifiPermission,
+                onTrustNetwork = onTrustNetwork
             )
         }
     }
@@ -163,7 +181,9 @@ private fun ErrorState(
 private fun AuditContent(
     state: PermissionAuditUiState,
     innerPadding: PaddingValues,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onRequestWifiPermission: () -> Unit,
+    onTrustNetwork: (Boolean) -> Unit
 ) {
     val criticalApps = state.apps.count { it.riskLevel == RiskLevel.Critical }
     val highApps = state.apps.count { it.riskLevel == RiskLevel.High }
@@ -225,7 +245,11 @@ private fun AuditContent(
         }
 
         item {
-            WifiSafetyCard(snapshot = state.wifiSnapshot)
+            WifiSafetyCard(
+                snapshot = state.wifiSnapshot,
+                onRequestWifiPermission = onRequestWifiPermission,
+                onTrustNetwork = onTrustNetwork
+            )
         }
 
         item {
@@ -584,7 +608,11 @@ private fun SuggestionRow(suggestion: SecuritySuggestion) {
 }
 
 @Composable
-private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
+private fun WifiSafetyCard(
+    snapshot: WifiSecuritySnapshot,
+    onRequestWifiPermission: () -> Unit,
+    onTrustNetwork: (Boolean) -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = wifiContainerColor(snapshot.safetyLevel)
@@ -653,6 +681,26 @@ private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
                 text = "Protection: ${snapshot.securityLabel}",
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (snapshot.canManageTrust) {
+                Button(
+                    onClick = { onTrustNetwork(!snapshot.isTrustedNetwork) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (snapshot.isTrustedNetwork) {
+                            MaterialTheme.colorScheme.secondary
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                    )
+                ) {
+                    Text(
+                        if (snapshot.isTrustedNetwork) {
+                            "Trusted network"
+                        } else {
+                            "Mark as trusted"
+                        }
+                    )
+                }
+            }
             snapshot.gatewayAddress?.let {
                 Text(
                     text = "Gateway: $it",
@@ -689,11 +737,14 @@ private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
                 )
             }
             if (snapshot.permissionLimited) {
-                Text(
-                    text = "Tip: allow location later if you want more detailed Wi-Fi identification.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Button(
+                    onClick = onRequestWifiPermission,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Allow Wi-Fi details")
+                }
             }
         }
     }

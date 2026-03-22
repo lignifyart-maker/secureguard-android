@@ -37,7 +37,8 @@ class PermissionAuditViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
                 val apps = scanInstalledAppsUseCase()
-                val wifiSnapshot = getWifiSecuritySnapshotUseCase()
+                val trustedNetworks = settingsDataStore.getTrustedWifiNetworks()
+                val wifiSnapshot = getWifiSecuritySnapshotUseCase(trustedNetworks)
                 Triple(
                     apps,
                     wifiSnapshot,
@@ -63,6 +64,15 @@ class PermissionAuditViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    fun setWifiTrusted(trusted: Boolean) {
+        viewModelScope.launch {
+            val snapshot = uiState.value.wifiSnapshot
+            if (!snapshot.canManageTrust) return@launch
+            settingsDataStore.setWifiTrusted(snapshot.networkName, trusted)
+            refresh()
         }
     }
 

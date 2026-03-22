@@ -14,6 +14,8 @@ data class PermissionAuditUiState(
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
         networkName = "Checking network...",
+        canManageTrust = false,
+        isTrustedNetwork = false,
         securityLabel = "Unknown",
         safetyLevel = WifiSafetyLevel.Unknown,
         crowdLabel = "Checking whether this Wi-Fi feels shared...",

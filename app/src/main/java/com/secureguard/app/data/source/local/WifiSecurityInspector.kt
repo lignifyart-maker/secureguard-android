@@ -22,7 +22,7 @@ class WifiSecurityInspector @Inject constructor(
     @ApplicationContext private val context: Context,
     private val localNetworkInspector: LocalNetworkInspector
 ) {
-    suspend fun inspect(): WifiSecuritySnapshot = withContext(Dispatchers.IO) {
+    suspend fun inspect(trustedNetworks: Set<String>): WifiSecuritySnapshot = withContext(Dispatchers.IO) {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val activeNetwork = connectivityManager.activeNetwork
@@ -33,6 +33,8 @@ class WifiSecurityInspector @Inject constructor(
             return@withContext WifiSecuritySnapshot(
                 isWifiActive = false,
                 networkName = "Not on Wi-Fi",
+                canManageTrust = false,
+                isTrustedNetwork = false,
                 securityLabel = "Cellular or offline",
                 safetyLevel = WifiSafetyLevel.Safe,
                 crowdLabel = "Not a shared Wi-Fi right now",
@@ -58,6 +60,8 @@ class WifiSecurityInspector @Inject constructor(
         }
 
         val networkName = resolveSsid(wifiInfo, hasLocationPermission)
+        val canManageTrust = hasLocationPermission && networkName != "Wi-Fi network"
+        val isTrustedNetwork = canManageTrust && networkName in trustedNetworks
         val securityLabel = resolveSecurityLabel(wifiInfo)
         val gatewayAddress = wifiManager.dhcpInfo?.gateway?.takeIf { it != 0 }?.let(::intToIp)
         val localAddress = wifiManager.dhcpInfo?.ipAddress?.takeIf { it != 0 }?.let(::intToIp)
@@ -77,16 +81,22 @@ class WifiSecurityInspector @Inject constructor(
             else -> WifiSafetyLevel.Safe
         }
 
-        val summary = when (safetyLevel) {
-            WifiSafetyLevel.Risky -> "This Wi-Fi looks open. Avoid banking or sensitive logins here."
-            WifiSafetyLevel.Caution -> "We could not fully confirm Wi-Fi protection."
-            WifiSafetyLevel.Safe -> "This Wi-Fi appears to use basic protection."
-            WifiSafetyLevel.Unknown -> "Wi-Fi safety could not be determined."
+        val summary = if (isTrustedNetwork && safetyLevel == WifiSafetyLevel.Safe) {
+            "This Wi-Fi is on your trusted list and appears protected."
+        } else {
+            when (safetyLevel) {
+                WifiSafetyLevel.Risky -> "This Wi-Fi looks open. Avoid banking or sensitive logins here."
+                WifiSafetyLevel.Caution -> "We could not fully confirm Wi-Fi protection."
+                WifiSafetyLevel.Safe -> "This Wi-Fi appears to use basic protection."
+                WifiSafetyLevel.Unknown -> "Wi-Fi safety could not be determined."
+            }
         }
 
         val detail = when {
             !hasLocationPermission ->
                 "Grant location permission later if you want SecureGuard to show more Wi-Fi details like the network name."
+            isTrustedNetwork ->
+                "You marked this network as trusted. That does not make it invulnerable, but it helps SecureGuard explain it with less alarm."
             securityLabel == "Open network" ->
                 "Open Wi-Fi can make it easier for nearby attackers to observe or tamper with traffic from weaker apps."
             securityLabel == "Unknown security" ->
@@ -100,6 +110,8 @@ class WifiSecurityInspector @Inject constructor(
         val sensitiveActionAdvice = when {
             securityLabel == "Open network" ->
                 "Skip banking, password changes, and other sensitive logins on this network if you can."
+            isTrustedNetwork ->
+                "This is one of your trusted networks, so routine use is fine. Stay careful with fake login prompts like you would anywhere else."
             localNetworkSnapshot.visibleDeviceCount >= 8 ->
                 "This looks like a shared Wi-Fi, so keep sensitive actions brief or wait for a more trusted connection."
             localNetworkSnapshot.visibleDeviceCount <= 3 ->
@@ -111,6 +123,8 @@ class WifiSecurityInspector @Inject constructor(
         WifiSecuritySnapshot(
             isWifiActive = true,
             networkName = networkName,
+            canManageTrust = canManageTrust,
+            isTrustedNetwork = isTrustedNetwork,
             securityLabel = securityLabel,
             safetyLevel = safetyLevel,
             crowdLabel = crowdLabel,

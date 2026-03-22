@@ -7,5 +7,6 @@ import javax.inject.Inject
 class GetWifiSecuritySnapshotUseCase @Inject constructor(
     private val wifiSecurityInspector: WifiSecurityInspector
 ) {
-    suspend operator fun invoke(): WifiSecuritySnapshot = wifiSecurityInspector.inspect()
+    suspend operator fun invoke(trustedNetworks: Set<String>): WifiSecuritySnapshot =
+        wifiSecurityInspector.inspect(trustedNetworks)
 }

@@ -3,6 +3,8 @@ package com.secureguard.app.domain.model
 data class WifiSecuritySnapshot(
     val isWifiActive: Boolean,
     val networkName: String,
+    val canManageTrust: Boolean,
+    val isTrustedNetwork: Boolean,
     val securityLabel: String,
     val safetyLevel: WifiSafetyLevel,
     val crowdLabel: String,
