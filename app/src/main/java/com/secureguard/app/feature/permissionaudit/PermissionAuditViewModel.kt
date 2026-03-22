@@ -6,6 +6,7 @@ import com.secureguard.app.core.datastore.SettingsDataStore
 import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
 import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
 import com.secureguard.app.domain.usecase.ObserveConnectionFeedPreviewUseCase
+import com.secureguard.app.domain.usecase.ObserveRecentConnectionTimelineUseCase
 import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
 import com.secureguard.app.domain.model.VpnProtectionState
 import com.secureguard.app.vpn.LocalVpnService
@@ -27,11 +28,13 @@ class PermissionAuditViewModel @Inject constructor(
     private val getWifiSecuritySnapshotUseCase: GetWifiSecuritySnapshotUseCase,
     private val buildSecurityOverviewUseCase: BuildSecurityOverviewUseCase,
     private val observeConnectionFeedPreviewUseCase: ObserveConnectionFeedPreviewUseCase,
+    private val observeRecentConnectionTimelineUseCase: ObserveRecentConnectionTimelineUseCase,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PermissionAuditUiState())
     val uiState: StateFlow<PermissionAuditUiState> = _uiState.asStateFlow()
     private var connectionFeedJob: Job? = null
+    private var recentTimelineJob: Job? = null
 
     init {
         observeLastScan()
@@ -146,6 +149,7 @@ class PermissionAuditViewModel @Inject constructor(
                 }
             }
         }
+        observeRecentTimeline()
     }
 
     private fun observeConnectionFeed(vpnState: VpnProtectionState) {
@@ -154,6 +158,17 @@ class PermissionAuditViewModel @Inject constructor(
             observeConnectionFeedPreviewUseCase(vpnState).collect { preview ->
                 _uiState.update { current ->
                     current.copy(connectionFeedPreview = preview)
+                }
+            }
+        }
+    }
+
+    private fun observeRecentTimeline() {
+        recentTimelineJob?.cancel()
+        recentTimelineJob = viewModelScope.launch {
+            observeRecentConnectionTimelineUseCase().collect { timeline ->
+                _uiState.update { current ->
+                    current.copy(recentConnectionTimeline = timeline)
                 }
             }
         }
