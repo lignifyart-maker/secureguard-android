@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.RiskLevel
+import com.secureguard.app.domain.model.SecurityOverview
+import com.secureguard.app.domain.model.SecuritySuggestion
 import com.secureguard.app.domain.model.WifiSafetyLevel
 import com.secureguard.app.domain.model.WifiSecuritySnapshot
 
@@ -176,6 +178,7 @@ private fun AuditContent(
     ) {
         item {
             HeroCard(
+                overview = state.securityOverview,
                 totalApps = state.apps.size,
                 notableApps = notableApps,
                 lastScanLabel = state.lastScanLabel,
@@ -208,6 +211,10 @@ private fun AuditContent(
         }
 
         item {
+            SecuritySuggestionCard(overview = state.securityOverview)
+        }
+
+        item {
             WifiSafetyCard(snapshot = state.wifiSnapshot)
         }
 
@@ -227,6 +234,7 @@ private fun AuditContent(
 
 @Composable
 private fun HeroCard(
+    overview: SecurityOverview,
     totalApps: Int,
     notableApps: Int,
     lastScanLabel: String,
@@ -266,18 +274,19 @@ private fun HeroCard(
             }
 
             Text(
-                text = "Your phone check-in is simple today",
+                text = overview.headline,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = "$notableApps of $totalApps apps asked for permissions that are worth a second look.",
+                text = overview.summary,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
+            ScoreBubble(score = overview.score)
             Text(
-                text = "Last scan: $lastScanLabel",
+                text = "$notableApps of $totalApps apps are worth a second look. Last scan: $lastScanLabel",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f)
             )
@@ -291,6 +300,30 @@ private fun HeroCard(
             ) {
                 Text("Run another check")
             }
+        }
+    }
+}
+
+@Composable
+private fun ScoreBubble(score: Int) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "Safety score",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "$score / 100",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
@@ -399,6 +432,54 @@ private fun GentleChecklist(apps: List<AppScanResult>) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SecuritySuggestionCard(overview: SecurityOverview) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Today, keep it simple",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            overview.suggestions.forEach { suggestion ->
+                SuggestionRow(suggestion = suggestion)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionRow(suggestion: SecuritySuggestion) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = suggestion.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = suggestion.detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

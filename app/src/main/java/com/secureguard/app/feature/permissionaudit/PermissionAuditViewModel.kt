@@ -3,6 +3,7 @@ package com.secureguard.app.feature.permissionaudit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.secureguard.app.core.datastore.SettingsDataStore
+import com.secureguard.app.domain.usecase.BuildSecurityOverviewUseCase
 import com.secureguard.app.domain.usecase.GetWifiSecuritySnapshotUseCase
 import com.secureguard.app.domain.usecase.ScanInstalledAppsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 class PermissionAuditViewModel @Inject constructor(
     private val scanInstalledAppsUseCase: ScanInstalledAppsUseCase,
     private val getWifiSecuritySnapshotUseCase: GetWifiSecuritySnapshotUseCase,
+    private val buildSecurityOverviewUseCase: BuildSecurityOverviewUseCase,
     private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PermissionAuditUiState())
@@ -36,14 +38,19 @@ class PermissionAuditViewModel @Inject constructor(
             runCatching {
                 val apps = scanInstalledAppsUseCase()
                 val wifiSnapshot = getWifiSecuritySnapshotUseCase()
-                apps to wifiSnapshot
+                Triple(
+                    apps,
+                    wifiSnapshot,
+                    buildSecurityOverviewUseCase(apps, wifiSnapshot)
+                )
             }
-                .onSuccess { (apps, wifiSnapshot) ->
+                .onSuccess { (apps, wifiSnapshot, securityOverview) ->
                     _uiState.update { current ->
                         current.copy(
                             isLoading = false,
                             apps = apps,
                             wifiSnapshot = wifiSnapshot,
+                            securityOverview = securityOverview,
                             errorMessage = null
                         )
                     }

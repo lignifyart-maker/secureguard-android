@@ -1,6 +1,8 @@
 package com.secureguard.app.feature.permissionaudit
 
 import com.secureguard.app.domain.model.AppScanResult
+import com.secureguard.app.domain.model.SecurityOverview
+import com.secureguard.app.domain.model.SecuritySuggestion
 import com.secureguard.app.domain.model.WifiSafetyLevel
 import com.secureguard.app.domain.model.WifiSecuritySnapshot
 
@@ -21,5 +23,17 @@ data class PermissionAuditUiState(
         permissionLimited = false,
         nearbyDeviceCount = 0,
         nearbyDeviceSummary = "Nearby device visibility is still loading."
+    ),
+    val securityOverview: SecurityOverview = SecurityOverview(
+        score = 72,
+        headline = "Checking your phone's safety rhythm",
+        summary = "SecureGuard is preparing a simple overview of what matters most.",
+        suggestions = listOf(
+            SecuritySuggestion(
+                title = "Preparing suggestions",
+                detail = "A few calm, high-impact tips will show up here after the scan finishes."
+            )
+        ),
+        watchApps = emptyList()
     )
 )
