@@ -484,16 +484,22 @@ private fun RecentActivityCard(
             modifier = Modifier.padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Recent activity",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            if (timeline.items.isNotEmpty()) {
-                TextButtonLike(
-                    text = "Clear",
-                    onClick = onClear
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent activity",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
+                if (timeline.items.isNotEmpty()) {
+                    TextButtonLike(
+                        text = "Clear",
+                        onClick = onClear
+                    )
+                }
             }
             Text(
                 text = timeline.summary,
