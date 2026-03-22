@@ -19,7 +19,8 @@ import kotlinx.coroutines.withContext
 
 @Singleton
 class WifiSecurityInspector @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val localNetworkInspector: LocalNetworkInspector
 ) {
     suspend fun inspect(): WifiSecuritySnapshot = withContext(Dispatchers.IO) {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -38,7 +39,9 @@ class WifiSecurityInspector @Inject constructor(
                 detail = "Public Wi-Fi risks are lower right now because your phone is not using a Wi-Fi network.",
                 gatewayAddress = null,
                 localAddress = null,
-                permissionLimited = false
+                permissionLimited = false,
+                nearbyDeviceCount = 0,
+                nearbyDeviceSummary = "No Wi-Fi neighbors to inspect right now."
             )
         }
 
@@ -56,6 +59,10 @@ class WifiSecurityInspector @Inject constructor(
         val securityLabel = resolveSecurityLabel(wifiInfo)
         val gatewayAddress = wifiManager.dhcpInfo?.gateway?.takeIf { it != 0 }?.let(::intToIp)
         val localAddress = wifiManager.dhcpInfo?.ipAddress?.takeIf { it != 0 }?.let(::intToIp)
+        val localNetworkSnapshot = localNetworkInspector.estimateVisibleDevices(
+            gatewayAddress = gatewayAddress,
+            localAddress = localAddress
+        )
 
         val safetyLevel = when (securityLabel) {
             "Open network" -> WifiSafetyLevel.Risky
@@ -90,7 +97,9 @@ class WifiSecurityInspector @Inject constructor(
             detail = detail,
             gatewayAddress = gatewayAddress,
             localAddress = localAddress,
-            permissionLimited = !hasLocationPermission
+            permissionLimited = !hasLocationPermission,
+            nearbyDeviceCount = localNetworkSnapshot.visibleDeviceCount,
+            nearbyDeviceSummary = localNetworkSnapshot.summary
         )
     }
 

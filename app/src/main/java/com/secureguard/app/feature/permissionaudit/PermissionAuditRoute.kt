@@ -483,6 +483,16 @@ private fun WifiSafetyCard(snapshot: WifiSecuritySnapshot) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Text(
+                text = "Visible devices: ${snapshot.nearbyDeviceCount}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = snapshot.nearbyDeviceSummary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (snapshot.permissionLimited) {
                 Text(
                     text = "Tip: allow location later if you want more detailed Wi-Fi identification.",

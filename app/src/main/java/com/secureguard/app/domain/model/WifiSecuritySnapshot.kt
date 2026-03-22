@@ -9,5 +9,7 @@ data class WifiSecuritySnapshot(
     val detail: String,
     val gatewayAddress: String?,
     val localAddress: String?,
-    val permissionLimited: Boolean
+    val permissionLimited: Boolean,
+    val nearbyDeviceCount: Int,
+    val nearbyDeviceSummary: String
 )

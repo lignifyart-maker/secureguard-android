@@ -18,6 +18,8 @@ data class PermissionAuditUiState(
         detail = "This overview will show whether your current Wi-Fi looks open or protected.",
         gatewayAddress = null,
         localAddress = null,
-        permissionLimited = false
+        permissionLimited = false,
+        nearbyDeviceCount = 0,
+        nearbyDeviceSummary = "Nearby device visibility is still loading."
     )
 )
