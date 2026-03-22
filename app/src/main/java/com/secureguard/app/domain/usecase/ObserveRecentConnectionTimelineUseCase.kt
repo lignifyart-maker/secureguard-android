@@ -18,11 +18,23 @@ class ObserveRecentConnectionTimelineUseCase @Inject constructor(
                         title = event.host ?: event.ipAddress ?: "Unknown target",
                         sourceLabel = event.appName ?: "Unknown app",
                         riskLabel = event.riskLabel,
+                        eventLabel = eventLabelFor(event.eventType),
                         relativeTime = relativeTimeFrom(event.createdAt)
                     )
                 }
             )
         }
+    }
+
+    private fun eventLabelFor(eventType: String): String = when (eventType) {
+        "VPN_STARTED" -> "VPN started"
+        "VPN_STOPPED" -> "VPN stopped"
+        "VPN_ERROR" -> "VPN issue"
+        "DNS_A_QUERY" -> "IPv4 lookup"
+        "DNS_AAAA_QUERY" -> "IPv6 lookup"
+        "DNS_CNAME_QUERY" -> "Alias lookup"
+        "DNS_MX_QUERY" -> "Mail lookup"
+        else -> "DNS lookup"
     }
 
     private fun relativeTimeFrom(createdAt: Long): String {

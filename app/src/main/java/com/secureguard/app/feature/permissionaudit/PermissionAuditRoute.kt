@@ -507,6 +507,11 @@ private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
                             color = connectionFeedAccent(item.riskLabel)
                         )
                         Text(
+                            text = item.eventLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
                             text = item.sourceLabel,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

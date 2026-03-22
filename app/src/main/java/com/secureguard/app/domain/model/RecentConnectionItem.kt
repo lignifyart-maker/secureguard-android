@@ -4,5 +4,6 @@ data class RecentConnectionItem(
     val title: String,
     val sourceLabel: String,
     val riskLabel: String,
+    val eventLabel: String,
     val relativeTime: String
 )
