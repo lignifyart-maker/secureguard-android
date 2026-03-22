@@ -7,15 +7,16 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.os.ParcelFileDescriptor
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.secureguard.app.MainActivity
-import com.secureguard.app.R
 import com.secureguard.app.domain.model.VpnProtectionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class LocalVpnService : VpnService() {
+    private var tunnelInterface: ParcelFileDescriptor? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -26,6 +27,8 @@ class LocalVpnService : VpnService() {
     }
 
     override fun onDestroy() {
+        tunnelInterface?.close()
+        tunnelInterface = null
         super.onDestroy()
         if (_serviceState.value != VpnProtectionState.Off) {
             _serviceState.value = VpnProtectionState.Off
@@ -34,6 +37,11 @@ class LocalVpnService : VpnService() {
     }
 
     private fun startProtection() {
+        if (tunnelInterface != null) {
+            _serviceState.value = VpnProtectionState.On
+            _statusMessage.value = "Protection mode is already active."
+            return
+        }
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Local monitoring is getting ready."))
         _serviceState.value = VpnProtectionState.Starting
@@ -48,11 +56,11 @@ class LocalVpnService : VpnService() {
                 .establish()
         }.onSuccess { parcelFileDescriptor ->
             if (parcelFileDescriptor != null) {
+                tunnelInterface = parcelFileDescriptor
                 _serviceState.value = VpnProtectionState.On
                 _statusMessage.value = "Protection mode is on. Traffic monitoring features can build on this tunnel."
                 val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 manager.notify(NOTIFICATION_ID, buildNotification("Protection mode is on."))
-                parcelFileDescriptor.close()
             } else {
                 _serviceState.value = VpnProtectionState.Error
                 _statusMessage.value = "SecureGuard could not establish the local VPN tunnel."
@@ -68,6 +76,8 @@ class LocalVpnService : VpnService() {
     }
 
     private fun stopProtection() {
+        tunnelInterface?.close()
+        tunnelInterface = null
         _serviceState.value = VpnProtectionState.Off
         _statusMessage.value = "Protection mode is off."
         stopForeground(STOP_FOREGROUND_REMOVE)

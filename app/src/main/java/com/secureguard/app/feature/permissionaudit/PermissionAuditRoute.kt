@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.secureguard.app.domain.model.AppScanResult
+import com.secureguard.app.domain.model.ConnectionFeedPreview
 import com.secureguard.app.domain.model.RiskLevel
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
@@ -260,6 +261,10 @@ private fun AuditContent(
         }
 
         item {
+            ConnectionFeedCard(preview = state.connectionFeedPreview)
+        }
+
+        item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniStatusCard(
                     title = "High alert",
@@ -313,6 +318,35 @@ private fun AuditContent(
 
         items(state.apps.take(8), key = { it.packageName }) { app ->
             AppRiskCard(app = app)
+        }
+    }
+}
+
+@Composable
+private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Live connection feed",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = preview.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = preview.detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

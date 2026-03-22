@@ -1,6 +1,7 @@
 package com.secureguard.app.feature.permissionaudit
 
 import com.secureguard.app.domain.model.AppScanResult
+import com.secureguard.app.domain.model.ConnectionFeedPreview
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
 import com.secureguard.app.domain.model.VpnProtectionState
@@ -15,6 +16,10 @@ data class PermissionAuditUiState(
     val trustedWifiNetworks: List<String> = emptyList(),
     val vpnProtectionState: VpnProtectionState = VpnProtectionState.Off,
     val vpnStatusMessage: String = "Protection mode is off. Turn it on when you want local network monitoring.",
+    val connectionFeedPreview: ConnectionFeedPreview = ConnectionFeedPreview(
+        title = "No live connections yet",
+        detail = "Turn on protection mode to start building a local connection feed for app traffic."
+    ),
     val wifiSnapshot: WifiSecuritySnapshot = WifiSecuritySnapshot(
         isWifiActive = false,
         networkName = "Checking network...",

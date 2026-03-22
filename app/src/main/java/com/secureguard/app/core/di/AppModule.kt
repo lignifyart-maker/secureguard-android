@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.secureguard.app.core.database.SecureGuardDatabase
 import com.secureguard.app.core.database.dao.AppScanDao
+import com.secureguard.app.core.database.dao.NetworkEventDao
 import com.secureguard.app.data.repository.AppScannerRepositoryImpl
 import com.secureguard.app.domain.repository.AppScannerRepository
 import dagger.Binds
@@ -24,11 +25,14 @@ object DatabaseModule {
             context,
             SecureGuardDatabase::class.java,
             "secureguard.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
     fun provideAppScanDao(database: SecureGuardDatabase): AppScanDao = database.appScanDao()
+
+    @Provides
+    fun provideNetworkEventDao(database: SecureGuardDatabase): NetworkEventDao = database.networkEventDao()
 }
 
 @Module
