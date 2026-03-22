@@ -195,7 +195,7 @@ class LocalVpnService : VpnService() {
                         host = dnsQuestion.host,
                         ipAddress = ipv4Packet.destinationIp,
                         protocol = "UDP/53",
-                        eventType = "DNS_QUERY",
+                        eventType = "DNS_${dnsQuestion.queryTypeLabel}_QUERY",
                         riskLabel = domainRiskClassifier.classify(dnsQuestion.host),
                         createdAt = System.currentTimeMillis()
                     )

@@ -17,9 +17,21 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 mostRecent != null -> {
                     val target = mostRecent.host ?: mostRecent.ipAddress ?: "unknown target"
                     val appName = mostRecent.appName ?: "Unknown app"
+                    val title = when (mostRecent.eventType) {
+                        "VPN_STARTED" -> "Protection mode started"
+                        "VPN_STOPPED" -> "Protection mode stopped"
+                        "VPN_ERROR" -> "Protection mode needs attention"
+                        else -> "$appName checked $target"
+                    }
+                    val detail = when (mostRecent.eventType) {
+                        "VPN_STARTED" -> "SecureGuard created a local tunnel and is ready to observe DNS traffic."
+                        "VPN_STOPPED" -> "Local protection mode was turned off."
+                        "VPN_ERROR" -> "SecureGuard could not keep the local tunnel alive."
+                        else -> "${mostRecent.protocol} ${humanizeRisk(mostRecent.riskLabel)} / ${mostRecent.eventType.lowercase()}"
+                    }
                     ConnectionFeedPreview(
-                        title = "$appName -> $target",
-                        detail = "${mostRecent.protocol} ${mostRecent.eventType.lowercase()} / ${mostRecent.riskLabel}"
+                        title = title,
+                        detail = detail
                     )
                 }
                 vpnState == VpnProtectionState.On ->
@@ -39,5 +51,12 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     )
             }
         }
+    }
+
+    private fun humanizeRisk(riskLabel: String): String = when (riskLabel) {
+        "Tracker" -> "looks like tracking or ad traffic"
+        "Sensitive" -> "touches a more sensitive domain"
+        "Routine" -> "looks routine"
+        else -> "was observed"
     }
 }
