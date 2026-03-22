@@ -48,6 +48,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                     val activityLabel = activityLabelFor(events.size)
                     ConnectionFeedPreview(
                         title = title,
+                        sourceLabel = sourceLabelFor(appName),
                         targetLabel = target,
                         eventLabel = eventLabelFor(mostRecent.eventType),
                         detail = detail,
@@ -61,6 +62,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 vpnState == VpnProtectionState.On ->
                     ConnectionFeedPreview(
                         title = "Listening for new traffic",
+                        sourceLabel = "SecureGuard feed",
                         targetLabel = "Waiting for the first target",
                         eventLabel = "DNS watch",
                         detail = "Protection mode is active. DNS and connection events can appear here once the tunnel parser is connected.",
@@ -73,6 +75,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 vpnState == VpnProtectionState.Starting ->
                     ConnectionFeedPreview(
                         title = "Protection is starting",
+                        sourceLabel = "SecureGuard feed",
                         targetLabel = "Tunnel is still warming up",
                         eventLabel = "VPN startup",
                         detail = "SecureGuard is preparing the local tunnel before any connection events can show up.",
@@ -85,6 +88,7 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
                 else ->
                     ConnectionFeedPreview(
                         title = "No live connections yet",
+                        sourceLabel = "SecureGuard feed",
                         targetLabel = "No target yet",
                         eventLabel = "Waiting",
                         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
@@ -122,6 +126,12 @@ class ObserveConnectionFeedPreviewUseCase @Inject constructor(
         "DNS_CNAME_QUERY" -> "Alias lookup"
         "DNS_MX_QUERY" -> "Mail lookup"
         else -> "DNS lookup"
+    }
+
+    private fun sourceLabelFor(appName: String): String = when (appName) {
+        "SecureGuard" -> "Source: SecureGuard"
+        "Unknown app" -> "Source: app not mapped yet"
+        else -> "Source: $appName"
     }
 
     private fun activityLabelFor(recentCount: Int): String = when {

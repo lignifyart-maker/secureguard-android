@@ -2,6 +2,7 @@ package com.secureguard.app.domain.model
 
 data class ConnectionFeedPreview(
     val title: String,
+    val sourceLabel: String,
     val targetLabel: String,
     val eventLabel: String,
     val detail: String,

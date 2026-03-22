@@ -399,6 +399,11 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
+                text = preview.sourceLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
                 text = preview.targetLabel,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary

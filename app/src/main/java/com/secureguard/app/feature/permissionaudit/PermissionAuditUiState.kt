@@ -20,6 +20,7 @@ data class PermissionAuditUiState(
     val vpnCapabilityNote: String = "Current protection mode can observe DNS tunnel events and service state. Per-app attribution and full flow handling are still being built.",
     val connectionFeedPreview: ConnectionFeedPreview = ConnectionFeedPreview(
         title = "No live connections yet",
+        sourceLabel = "SecureGuard feed",
         targetLabel = "No target yet",
         eventLabel = "Waiting",
         detail = "Turn on protection mode to start building a local connection feed for app traffic.",
