@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.ConnectionFeedPreview
 import com.secureguard.app.domain.model.RiskLevel
+import com.secureguard.app.domain.model.RecentConnectionTimeline
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
 import com.secureguard.app.domain.model.VpnProtectionState
@@ -313,6 +314,10 @@ private fun AuditContent(
         }
 
         item {
+            RecentActivityCard(timeline = state.recentConnectionTimeline)
+        }
+
+        item {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniStatusCard(
                     title = "High alert",
@@ -455,6 +460,39 @@ private fun ConnectionFeedCard(preview: ConnectionFeedPreview) {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun RecentActivityCard(timeline: RecentConnectionTimeline) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(22.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Recent activity",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            timeline.items.take(3).forEach { item ->
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+                ) {
+                    Text(
+                        text = item.title,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
         }
     }
 }
