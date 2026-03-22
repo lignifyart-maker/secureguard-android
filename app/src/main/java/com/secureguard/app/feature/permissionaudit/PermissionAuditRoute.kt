@@ -835,6 +835,10 @@ private fun SuggestionRow(suggestion: SecuritySuggestion) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            RiskBadgeText(
+                text = suggestion.priorityLabel,
+                color = suggestionPriorityColor(suggestion.priorityLabel)
+            )
             Text(
                 text = suggestion.title,
                 style = MaterialTheme.typography.titleSmall,
@@ -1250,6 +1254,13 @@ private fun activityAccent(label: String): Color = when (label) {
     "Busy" -> Color(0xFFDD8B42)
     "Very busy" -> Color(0xFFC55A54)
     "Warming up" -> Color(0xFFB27A1F)
+    else -> Color(0xFF6F7C92)
+}
+
+private fun suggestionPriorityColor(label: String): Color = when (label) {
+    "Do now" -> Color(0xFFC55A54)
+    "Soon" -> Color(0xFFDD8B42)
+    "Good to know" -> Color(0xFF4A8C69)
     else -> Color(0xFF6F7C92)
 }
 

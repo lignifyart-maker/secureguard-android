@@ -60,7 +60,8 @@ data class PermissionAuditUiState(
         suggestions = listOf(
             SecuritySuggestion(
                 title = "Preparing suggestions",
-                detail = "A few calm, high-impact tips will show up here after the scan finishes."
+                detail = "A few calm, high-impact tips will show up here after the scan finishes.",
+                priorityLabel = "Preparing"
             )
         ),
         watchApps = emptyList(),
