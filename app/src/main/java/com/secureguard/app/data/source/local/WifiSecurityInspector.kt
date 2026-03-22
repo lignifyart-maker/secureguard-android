@@ -77,6 +77,7 @@ class WifiSecurityInspector @Inject constructor(
 
         val safetyLevel = when (securityLabel) {
             "Open network" -> WifiSafetyLevel.Risky
+            "Old encryption" -> WifiSafetyLevel.Caution
             "Unknown security" -> WifiSafetyLevel.Caution
             else -> WifiSafetyLevel.Safe
         }
@@ -101,6 +102,8 @@ class WifiSecurityInspector @Inject constructor(
                 "Open Wi-Fi can make it easier for nearby attackers to observe or tamper with traffic from weaker apps."
             securityLabel == "Unknown security" ->
                 "Android did not expose the current Wi-Fi protection type clearly on this device, so treat unfamiliar networks carefully."
+            securityLabel == "Old encryption" ->
+                "This Wi-Fi uses older protection. It is better than open Wi-Fi, but not as reassuring as a modern protected network."
             localNetworkSnapshot.visibleDeviceCount >= 8 ->
                 "A busier Wi-Fi is normal in cafes, offices, and shared places, but it is a good reason to be more careful with sensitive actions."
             else ->
@@ -110,6 +113,8 @@ class WifiSecurityInspector @Inject constructor(
         val sensitiveActionAdvice = when {
             securityLabel == "Open network" ->
                 "Skip banking, password changes, and other sensitive logins on this network if you can."
+            securityLabel == "Old encryption" ->
+                "This Wi-Fi is usable for routine browsing, but save banking and other sensitive actions for a stronger network if possible."
             isTrustedNetwork ->
                 "This is one of your trusted networks, so routine use is fine. Stay careful with fake login prompts like you would anywhere else."
             localNetworkSnapshot.visibleDeviceCount >= 8 ->
