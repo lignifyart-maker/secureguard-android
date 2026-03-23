@@ -198,26 +198,41 @@ class PermissionAuditViewModel @Inject constructor(
                     val tag = json.optString("tag_name").ifBlank { json.optString("name") }
                     val releaseUrl = json.optString("html_url")
                     val releaseTitle = json.optString("name").ifBlank { tag }
-                    Triple(tag, releaseTitle, releaseUrl)
+                    val assets = json.optJSONArray("assets")
+                    val apkUrl = (0 until (assets?.length() ?: 0))
+                        .asSequence()
+                        .mapNotNull { index -> assets?.optJSONObject(index) }
+                        .firstOrNull { asset ->
+                            asset.optString("name").equals("app-release.apk", ignoreCase = true)
+                        }
+                        ?.optString("browser_download_url")
+                        ?.ifBlank { null }
+                    UpdateCheckResult(
+                        tag = tag,
+                        releaseTitle = releaseTitle,
+                        releaseUrl = releaseUrl,
+                        apkUrl = apkUrl
+                    )
                 }
-                .onSuccess { (tag, title, url) ->
-                    val latestVersion = tag.removePrefix("v")
+                .onSuccess { result ->
+                    val latestVersion = result.tag.removePrefix("v")
                     val hasUpdate = latestVersion.isNotBlank() &&
                         latestVersion != BuildConfig.VERSION_NAME &&
-                        url.isNotBlank()
+                        result.releaseUrl.isNotBlank()
                     _uiState.update {
                         it.copy(
                             isCheckingForUpdate = false,
                             updateStatusMessage = if (hasUpdate) {
-                                "找到新版 $latestVersion"
+                                "???? $latestVersion"
                             } else {
-                                "目前已經是最新版"
+                                "????????"
                             },
                             availableUpdate = if (hasUpdate) {
                                 AvailableUpdate(
                                     versionLabel = latestVersion,
-                                    releaseTitle = title,
-                                    releaseUrl = url
+                                    releaseTitle = result.releaseTitle,
+                                    releaseUrl = result.releaseUrl,
+                                    apkUrl = result.apkUrl
                                 )
                             } else {
                                 null
@@ -330,4 +345,11 @@ class PermissionAuditViewModel @Inject constructor(
         const val LATEST_RELEASE_API_URL =
             "https://api.github.com/repos/lignifyart-maker/secureguard-android/releases/latest"
     }
+
+    private data class UpdateCheckResult(
+        val tag: String,
+        val releaseTitle: String,
+        val releaseUrl: String,
+        val apkUrl: String?
+    )
 }

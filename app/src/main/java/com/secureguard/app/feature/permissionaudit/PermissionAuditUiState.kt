@@ -89,5 +89,6 @@ data class PermissionAuditUiState(
 data class AvailableUpdate(
     val versionLabel: String,
     val releaseTitle: String,
-    val releaseUrl: String
+    val releaseUrl: String,
+    val apkUrl: String?
 )

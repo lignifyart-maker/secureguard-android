@@ -2,10 +2,16 @@ package com.secureguard.app.feature.permissionaudit
 
 import android.Manifest
 import android.app.Activity
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.database.Cursor
 import android.net.VpnService
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +59,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +94,7 @@ fun PermissionAuditRoute(
     var selectedApp by remember { mutableStateOf<AppScanResult?>(null) }
     var localStatusMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingUninstallPackage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingUpdateDownloadId by rememberSaveable { mutableStateOf<Long?>(null) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) {
@@ -112,6 +120,32 @@ fun PermissionAuditRoute(
             }
         }
         viewModel.refresh()
+    }
+    DisposableEffect(context, pendingUpdateDownloadId) {
+        val downloadId = pendingUpdateDownloadId
+        if (downloadId == null) {
+            onDispose { }
+        } else {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(receiverContext: Context, intent: Intent) {
+                    if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
+                    val completedId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
+                    if (completedId != downloadId) return
+                    pendingUpdateDownloadId = null
+                    localStatusMessage = handleDownloadedUpdate(receiverContext, completedId)
+                }
+            }
+            val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("DEPRECATION")
+                context.registerReceiver(receiver, filter)
+            }
+            onDispose {
+                runCatching { context.unregisterReceiver(receiver) }
+            }
+        }
     }
     PermissionAuditScreen(
         state = uiState,
@@ -172,7 +206,14 @@ fun PermissionAuditRoute(
             onDismiss = viewModel::dismissUpdateStatus,
             onDownload = {
                 viewModel.dismissUpdateStatus()
-                openBrowser(context, update.releaseUrl)
+                val apkUrl = update.apkUrl
+                if (apkUrl.isNullOrBlank()) {
+                    localStatusMessage = "Direct APK download is not available for this release."
+                    openBrowser(context, update.releaseUrl)
+                } else {
+                    pendingUpdateDownloadId = enqueueUpdateDownload(context, update)
+                    localStatusMessage = "Downloading update package..."
+                }
             }
         )
     }
@@ -2339,6 +2380,81 @@ private fun openBrowser(context: Context, url: String) {
     context.startActivity(intent)
 }
 
+private fun enqueueUpdateDownload(
+    context: Context,
+    update: AvailableUpdate
+): Long {
+    val apkUrl = requireNotNull(update.apkUrl)
+    val request = DownloadManager.Request(Uri.parse(apkUrl))
+        .setTitle("SecureGuard ${update.versionLabel}")
+        .setDescription("Downloading update package")
+        .setMimeType(APK_MIME_TYPE)
+        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        .setDestinationInExternalPublicDir(
+            Environment.DIRECTORY_DOWNLOADS,
+            "secureguard-${update.versionLabel}.apk"
+        )
+        .setAllowedOverMetered(true)
+        .setAllowedOverRoaming(true)
+    val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    return downloadManager.enqueue(request)
+}
+
+private fun handleDownloadedUpdate(
+    context: Context,
+    downloadId: Long
+): String {
+    val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    val query = DownloadManager.Query().setFilterById(downloadId)
+    downloadManager.query(query).use { cursor ->
+        if (!cursor.moveToFirst()) {
+            return "Download finished, but the file could not be located."
+        }
+        val status = cursor.getIntColumn(DownloadManager.COLUMN_STATUS)
+        return when (status) {
+            DownloadManager.STATUS_SUCCESSFUL -> {
+                val apkUri = downloadManager.getUriForDownloadedFile(downloadId)
+                if (apkUri == null) {
+                    "Download finished, but Android did not expose the APK file."
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                    !context.packageManager.canRequestPackageInstalls()
+                ) {
+                    openUnknownSourcesSettings(context)
+                    "Download finished. Allow installs from this app, then return and open the APK from Downloads."
+                } else {
+                    openApkInstaller(context, apkUri)
+                    "Download finished. Android installer opened."
+                }
+            }
+
+            DownloadManager.STATUS_FAILED -> "Download failed. Please try again."
+            else -> "Download finished, but Android is still preparing the file."
+        }
+    }
+}
+
+private fun Cursor.getIntColumn(columnName: String): Int =
+    getInt(getColumnIndexOrThrow(columnName))
+
+private fun openApkInstaller(context: Context, apkUri: Uri) {
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(apkUri, APK_MIME_TYPE)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(intent)
+}
+
+private fun openUnknownSourcesSettings(context: Context) {
+    val intent = Intent(
+        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+        Uri.parse("package:${context.packageName}")
+    ).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(intent)
+}
+
 private fun sectionSummary(
     section: HomeSection,
     itemCount: Int,
@@ -2436,6 +2552,7 @@ private enum class HomeSection(val title: String) {
 private const val NOTEWORTHY_PREVIEW_COUNT = 10
 private const val OVERSIZED_APP_BYTES = 150L * 1024L * 1024L
 private const val STALE_APP_MS = 30L * 24L * 60L * 60L * 1000L
+private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
 
 @Composable
 private fun riskContainerColor(level: RiskLevel): Color = when (level) {
