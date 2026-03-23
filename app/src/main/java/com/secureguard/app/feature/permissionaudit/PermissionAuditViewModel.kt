@@ -55,20 +55,21 @@ class PermissionAuditViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching {
-                val apps = scanInstalledAppsUseCase()
+                val appSnapshot = scanInstalledAppsUseCase()
                 val trustedNetworks = settingsDataStore.getTrustedWifiNetworks()
                 val wifiSnapshot = getWifiSecuritySnapshotUseCase(trustedNetworks)
                 Triple(
-                    apps,
+                    appSnapshot,
                     wifiSnapshot,
-                    buildSecurityOverviewUseCase(apps, wifiSnapshot)
+                    buildSecurityOverviewUseCase(appSnapshot.apps, wifiSnapshot)
                 )
             }
-                .onSuccess { (apps, wifiSnapshot, securityOverview) ->
+                .onSuccess { (appSnapshot, wifiSnapshot, securityOverview) ->
                     _uiState.update { current ->
                         current.copy(
                             isLoading = false,
-                            apps = apps,
+                            apps = appSnapshot.apps,
+                            hasUsageAccess = appSnapshot.hasUsageAccess,
                             wifiSnapshot = wifiSnapshot,
                             securityOverview = securityOverview,
                             errorMessage = null

@@ -12,6 +12,7 @@ import com.secureguard.app.domain.model.WifiSecuritySnapshot
 data class PermissionAuditUiState(
     val isLoading: Boolean = true,
     val apps: List<AppScanResult> = emptyList(),
+    val hasUsageAccess: Boolean = false,
     val errorMessage: String? = null,
     val isCheckingForUpdate: Boolean = false,
     val updateStatusMessage: String? = null,

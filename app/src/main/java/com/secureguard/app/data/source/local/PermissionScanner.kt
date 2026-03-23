@@ -2,15 +2,19 @@ package com.secureguard.app.data.source.local
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.app.usage.StorageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.app.usage.UsageStatsManager
+import android.os.storage.StorageManager
 import android.os.Build
 import android.os.Process
 import androidx.core.content.pm.PackageInfoCompat
 import com.secureguard.app.domain.model.AppScanResult
+import com.secureguard.app.domain.model.AppScanSnapshot
+import com.secureguard.app.domain.model.AppSizeSource
 import com.secureguard.app.domain.model.RiskLevel
 import java.io.File
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,11 +27,11 @@ import kotlinx.coroutines.withContext
 class PermissionScanner @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    suspend fun scanInstalledApps(): List<AppScanResult> = withContext(Dispatchers.IO) {
+    suspend fun scanInstalledApps(): AppScanSnapshot = withContext(Dispatchers.IO) {
         val packages = context.packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
-        val usageMap = recentUsageMap()
+        val usageStats = recentUsageSnapshot()
 
-        packages
+        val apps = packages
             .asSequence()
             .filterNot { it.isSystemApp() }
             .map { packageInfo ->
@@ -35,17 +39,15 @@ class PermissionScanner @Inject constructor(
                 val riskyPermissions = requestedPermissions.filter { permission ->
                     permission in highRiskPermissions
                 }
+                val sizeInfo = resolveInstalledSize(packageInfo)
                 AppScanResult(
                     packageName = packageInfo.packageName,
                     appName = packageInfo.safeLabel(context.packageManager),
                     versionName = packageInfo.versionName.orEmpty(),
                     versionCode = PackageInfoCompat.getLongVersionCode(packageInfo),
-                    apkSizeBytes = packageInfo.applicationInfo?.sourceDir
-                        ?.let(::File)
-                        ?.takeIf { it.exists() }
-                        ?.length()
-                        ?: 0L,
-                    lastUsedAt = usageMap[packageInfo.packageName],
+                    apkSizeBytes = sizeInfo.bytes,
+                    sizeSource = sizeInfo.source,
+                    lastUsedAt = usageStats.lastUsedByPackage[packageInfo.packageName],
                     requestedPermissions = requestedPermissions,
                     riskyPermissions = riskyPermissions,
                     riskLevel = evaluateRisk(packageInfo, riskyPermissions, requestedPermissions),
@@ -57,18 +59,34 @@ class PermissionScanner @Inject constructor(
                     .thenBy { it.appName.lowercase() }
             )
             .toList()
+
+        AppScanSnapshot(
+            apps = apps,
+            hasUsageAccess = usageStats.hasUsageAccess
+        )
     }
 
-    private fun recentUsageMap(): Map<String, Long> {
-        if (!canReadUsageStats()) return emptyMap()
+    private fun recentUsageSnapshot(): UsageStatsSnapshot {
+        if (!canReadUsageStats()) {
+            return UsageStatsSnapshot(
+                hasUsageAccess = false,
+                lastUsedByPackage = emptyMap()
+            )
+        }
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val end = System.currentTimeMillis()
         val start = end - USAGE_LOOKBACK_MS
-        return usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end)
+        val lastUsedByPackage = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, start, end)
             .orEmpty()
             .asSequence()
             .filter { it.lastTimeUsed > 0L }
-            .associate { it.packageName to it.lastTimeUsed }
+            .groupBy { it.packageName }
+            .mapValues { (_, stats) -> stats.maxOf { it.lastTimeUsed } }
+
+        return UsageStatsSnapshot(
+            hasUsageAccess = true,
+            lastUsedByPackage = lastUsedByPackage
+        )
     }
 
     private fun canReadUsageStats(): Boolean {
@@ -88,6 +106,55 @@ class PermissionScanner @Inject constructor(
             )
         }
         return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun resolveInstalledSize(packageInfo: PackageInfo): AppSizeInfo {
+        val applicationInfo = packageInfo.applicationInfo
+        val fallbackSize = applicationInfo?.sourceDir
+            ?.let(::File)
+            ?.takeIf { it.exists() }
+            ?.length()
+            ?: 0L
+
+        if (applicationInfo == null || !canReadUsageStats()) {
+            return AppSizeInfo(
+                bytes = fallbackSize,
+                source = AppSizeSource.ApkEstimate
+            )
+        }
+
+        val storageStatsManager =
+            context.getSystemService(Context.STORAGE_STATS_SERVICE) as? StorageStatsManager
+                ?: return AppSizeInfo(
+                    bytes = fallbackSize,
+                    source = AppSizeSource.ApkEstimate
+                )
+
+        return runCatching {
+            val storageUuid = applicationInfo.storageUuid ?: StorageManager.UUID_DEFAULT
+            val stats = storageStatsManager.queryStatsForPackage(
+                storageUuid,
+                packageInfo.packageName,
+                Process.myUserHandle()
+            )
+            val totalSize = stats.appBytes + stats.dataBytes + stats.cacheBytes
+            if (totalSize > 0L) {
+                AppSizeInfo(
+                    bytes = totalSize,
+                    source = AppSizeSource.InstalledSize
+                )
+            } else {
+                AppSizeInfo(
+                    bytes = fallbackSize,
+                    source = AppSizeSource.ApkEstimate
+                )
+            }
+        }.getOrDefault(
+            AppSizeInfo(
+                bytes = fallbackSize,
+                source = AppSizeSource.ApkEstimate
+            )
+        )
     }
 
     private fun evaluateRisk(
@@ -173,4 +240,14 @@ class PermissionScanner @Inject constructor(
 
         const val USAGE_LOOKBACK_MS = 1000L * 60 * 60 * 24 * 120
     }
+
+    private data class UsageStatsSnapshot(
+        val hasUsageAccess: Boolean,
+        val lastUsedByPackage: Map<String, Long>
+    )
+
+    private data class AppSizeInfo(
+        val bytes: Long,
+        val source: AppSizeSource
+    )
 }

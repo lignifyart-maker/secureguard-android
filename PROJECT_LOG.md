@@ -51,9 +51,13 @@
 - Initial release tag `v1.0.0` failed because the workflow expected `./gradlew`, but the repo does not include a Gradle wrapper.
 - Fixed the workflow to use `gradle/actions/setup-gradle@v4` with Gradle `8.14`.
 - Pushed workflow fix in commit `cada769`.
-- Pushed release retry tag `v1.0.1`.
-- Current release run to watch:
-  - `https://github.com/lignifyart-maker/secureguard-android/actions/runs/23411471656`
+- `v1.0.1` release completed successfully.
+- `v1.0.2` release completed successfully after the home-list and uninstall-flow fixes.
+- Releases page:
+  - `https://github.com/lignifyart-maker/secureguard-android/releases`
+- Latest release page:
+  - `https://github.com/lignifyart-maker/secureguard-android/releases/tag/v1.0.2`
+- The repository visibility was later changed from private to public so release links and update checks are no longer blocked by repo access.
 
 ## Important Commits
 
@@ -61,23 +65,30 @@
 - `97c4e4a` Refocus app around actionable cleanup flow
 - `d9d5f40` Add update checker and slime branding
 - `cada769` Fix GitHub release workflow build step
+- `06dcb6b` Update project log for cleanup-focused direction
+- `3eabb25` Polish home list limits and uninstall flow
 
 ## Current State
 
 - The app is now usable as a lightweight cleanup helper rather than a long technical dashboard.
 - Users can now act on risky or removable apps instead of only reading about them.
 - The home screen is cleaner, but still needs more polish around empty states and wording consistency.
+- The home summary now shows the app version.
+- The `值得注意的` section is capped to 10 items by default, with a `顯示更多` expansion path.
+- The uninstall path now opens Android's uninstall flow correctly instead of stalling.
 - The oversized-app list is a first-pass approximation based on APK size, not full storage usage yet.
 - The unused-app list depends on Usage Access and should be considered functional but not fully polished.
-- The update-check flow is implemented, but the release pipeline still needs a confirmed successful end-to-end run.
+- The update-check flow is implemented and the public GitHub release pipeline is now working end to end.
+- Installing a newer APK over an older local build may still fail because releases are currently debug-signed, and debug signatures differ between local builds and GitHub Actions builds.
 
 ## Next Recommended Steps
 
-1. Confirm the `v1.0.1` GitHub Release run succeeds and verify the APK appears on the Releases page.
+1. Switch release distribution from debug signing to a stable release keystore so installed builds can upgrade in place.
 2. Polish the three-section home flow:
    - tighten empty states
    - smooth wording
    - improve section summary copy
-3. Improve oversized-app accuracy by moving beyond APK-only size if needed.
-4. Decide whether `Protection mode` should stay as an advanced page, hidden tool, or be removed from the main experience entirely.
-5. Add small success feedback after uninstall return so users know the list was refreshed on purpose.
+3. Make the `很多天沒用的` section clearer when Usage Access is missing versus when the result is truly zero.
+4. Improve oversized-app accuracy by moving beyond APK-only size if needed.
+5. Decide whether `Protection mode` should stay as an advanced page, hidden tool, or be removed from the main experience entirely.
+6. Add small success feedback after uninstall return so users know the list was refreshed on purpose.

@@ -69,6 +69,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.secureguard.app.domain.model.AppScanResult
 import com.secureguard.app.domain.model.ConnectionFeedPreview
 import com.secureguard.app.domain.model.RiskLevel
+import com.secureguard.app.domain.model.AppSizeSource
 import com.secureguard.app.domain.model.RecentConnectionTimeline
 import com.secureguard.app.domain.model.SecurityOverview
 import com.secureguard.app.domain.model.SecuritySuggestion
@@ -84,6 +85,8 @@ fun PermissionAuditRoute(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedApp by remember { mutableStateOf<AppScanResult?>(null) }
+    var localStatusMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingUninstallPackage by rememberSaveable { mutableStateOf<String?>(null) }
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) {
@@ -98,14 +101,27 @@ fun PermissionAuditRoute(
     }
     val uninstallLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
-    ) {
+    ) { result ->
+        val uninstalledPackage = pendingUninstallPackage
+        pendingUninstallPackage = null
+        if (uninstalledPackage != null) {
+            localStatusMessage = if (result.resultCode == Activity.RESULT_OK || !isPackageInstalled(context, uninstalledPackage)) {
+                "Uninstall complete. List refreshed."
+            } else {
+                "Returned from uninstall screen. List refreshed."
+            }
+        }
         viewModel.refresh()
     }
     PermissionAuditScreen(
         state = uiState,
+        statusMessage = localStatusMessage ?: uiState.updateStatusMessage,
         onOpenAppActions = { selectedApp = it },
         onCheckForUpdate = viewModel::checkForUpdate,
-        onDismissUpdateStatus = viewModel::dismissUpdateStatus,
+        onDismissStatus = {
+            localStatusMessage = null
+            viewModel.dismissUpdateStatus()
+        },
         onRefresh = viewModel::refresh,
         onClearRecentActivity = viewModel::clearRecentActivity,
         onToggleRecentActivityExpanded = viewModel::toggleRecentActivityExpanded,
@@ -145,6 +161,7 @@ fun PermissionAuditRoute(
             },
             onUninstall = {
                 selectedApp = null
+                pendingUninstallPackage = app.packageName
                 uninstallLauncher.launch(uninstallIntent(app.packageName))
             }
         )
@@ -204,9 +221,10 @@ private fun VpnDisclosureDialog(
 @Composable
 private fun PermissionAuditScreen(
     state: PermissionAuditUiState,
+    statusMessage: String?,
     onOpenAppActions: (AppScanResult) -> Unit,
     onCheckForUpdate: () -> Unit,
-    onDismissUpdateStatus: () -> Unit,
+    onDismissStatus: () -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
     onToggleRecentActivityExpanded: () -> Unit,
@@ -259,8 +277,9 @@ private fun PermissionAuditScreen(
             else -> AuditContent(
                 state = state,
                 innerPadding = innerPadding,
+                statusMessage = statusMessage,
                 onCheckForUpdate = onCheckForUpdate,
-                onDismissUpdateStatus = onDismissUpdateStatus,
+                onDismissStatus = onDismissStatus,
                 onRefresh = onRefresh,
                 onOpenAppActions = onOpenAppActions,
                 onClearRecentActivity = onClearRecentActivity,
@@ -345,8 +364,9 @@ private fun ErrorState(
 private fun AuditContent(
     state: PermissionAuditUiState,
     innerPadding: PaddingValues,
+    statusMessage: String?,
     onCheckForUpdate: () -> Unit,
-    onDismissUpdateStatus: () -> Unit,
+    onDismissStatus: () -> Unit,
     onOpenAppActions: (AppScanResult) -> Unit,
     onRefresh: () -> Unit,
     onClearRecentActivity: () -> Unit,
@@ -368,9 +388,12 @@ private fun AuditContent(
         .filter { it.apkSizeBytes >= OVERSIZED_APP_BYTES }
         .sortedByDescending { it.apkSizeBytes }
     val staleApps = state.apps
-        .filter { it.lastUsedAt != null && System.currentTimeMillis() - it.lastUsedAt >= STALE_APP_MS }
-        .sortedBy { it.lastUsedAt ?: Long.MAX_VALUE }
-    val usageAccessEnabled = state.apps.any { it.lastUsedAt != null }
+        .filter { state.hasUsageAccess && (it.lastUsedAt == null || System.currentTimeMillis() - it.lastUsedAt >= STALE_APP_MS) }
+        .sortedBy { it.lastUsedAt ?: 0L }
+    val usageAccessEnabled = state.hasUsageAccess
+    val usageCoverageCount = state.apps.count { it.lastUsedAt != null }
+    val installedSizeCount = oversizedApps.count { it.sizeSource == AppSizeSource.InstalledSize }
+    val apkEstimateCount = oversizedApps.count { it.sizeSource == AppSizeSource.ApkEstimate }
 
     val currentItems = when (selectedSection) {
         HomeSection.Noteworthy -> if (isNoteworthyExpanded) noteworthyApps else noteworthyApps.take(NOTEWORTHY_PREVIEW_COUNT)
@@ -394,11 +417,11 @@ private fun AuditContent(
                 oversizedCount = oversizedApps.size,
                 staleCount = staleApps.size,
                 isCheckingForUpdate = state.isCheckingForUpdate,
-                updateStatusMessage = state.updateStatusMessage,
+                updateStatusMessage = statusMessage,
                 versionLabel = BuildConfig.VERSION_NAME,
                 lastScanLabel = state.lastScanLabel,
                 onCheckForUpdate = onCheckForUpdate,
-                onDismissUpdateStatus = onDismissUpdateStatus,
+                onDismissUpdateStatus = onDismissStatus,
                 onRefresh = onRefresh
             )
         }
@@ -418,6 +441,10 @@ private fun AuditContent(
                 section = selectedSection,
                 itemCount = if (selectedSection == HomeSection.Noteworthy) noteworthyApps.size else currentItems.size,
                 usageAccessEnabled = usageAccessEnabled,
+                usageCoverageCount = usageCoverageCount,
+                totalAppCount = state.apps.size,
+                installedSizeCount = installedSizeCount,
+                apkEstimateCount = apkEstimateCount,
                 canExpand = selectedSection == HomeSection.Noteworthy && noteworthyApps.size > NOTEWORTHY_PREVIEW_COUNT,
                 isExpanded = isNoteworthyExpanded,
                 onToggleExpanded = { isNoteworthyExpanded = !isNoteworthyExpanded },
@@ -430,6 +457,10 @@ private fun AuditContent(
                 EmptySectionCard(
                     section = selectedSection,
                     usageAccessEnabled = usageAccessEnabled,
+                    usageCoverageCount = usageCoverageCount,
+                    totalAppCount = state.apps.size,
+                    installedSizeCount = installedSizeCount,
+                    apkEstimateCount = apkEstimateCount,
                     onOpenUsageAccess = { openUsageAccessSettings(context) }
                 )
             }
@@ -632,6 +663,10 @@ private fun SectionSummaryCard(
     section: HomeSection,
     itemCount: Int,
     usageAccessEnabled: Boolean,
+    usageCoverageCount: Int,
+    totalAppCount: Int,
+    installedSizeCount: Int,
+    apkEstimateCount: Int,
     canExpand: Boolean,
     isExpanded: Boolean,
     onToggleExpanded: () -> Unit,
@@ -655,6 +690,18 @@ private fun SectionSummaryCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (section == HomeSection.Unused && usageAccessEnabled) {
+                UsageCoverageNote(
+                    usageCoverageCount = usageCoverageCount,
+                    totalAppCount = totalAppCount
+                )
+            }
+            if (section == HomeSection.Oversized) {
+                OversizedSourceNote(
+                    installedSizeCount = installedSizeCount,
+                    apkEstimateCount = apkEstimateCount
+                )
+            }
             if (section == HomeSection.Unused && !usageAccessEnabled) {
                 TextButtonLike(
                     text = "打開使用紀錄權限",
@@ -675,6 +722,10 @@ private fun SectionSummaryCard(
 private fun EmptySectionCard(
     section: HomeSection,
     usageAccessEnabled: Boolean,
+    usageCoverageCount: Int,
+    totalAppCount: Int,
+    installedSizeCount: Int,
+    apkEstimateCount: Int,
     onOpenUsageAccess: () -> Unit
 ) {
     Card(
@@ -695,6 +746,18 @@ private fun EmptySectionCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            if (section == HomeSection.Unused && usageAccessEnabled) {
+                UsageCoverageNote(
+                    usageCoverageCount = usageCoverageCount,
+                    totalAppCount = totalAppCount
+                )
+            }
+            if (section == HomeSection.Oversized) {
+                OversizedSourceNote(
+                    installedSizeCount = installedSizeCount,
+                    apkEstimateCount = apkEstimateCount
+                )
+            }
             if (section == HomeSection.Unused && !usageAccessEnabled) {
                 Button(
                     onClick = onOpenUsageAccess,
@@ -708,6 +771,57 @@ private fun EmptySectionCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun UsageCoverageNote(
+    usageCoverageCount: Int,
+    totalAppCount: Int
+) {
+    val message = if (usageCoverageCount in 1 until totalAppCount) {
+        "Usage history found for $usageCoverageCount of $totalAppCount apps. Apps without recent history may still appear here."
+    } else {
+        "Usage history is available for this device."
+    }
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun OversizedSourceNote(
+    installedSizeCount: Int,
+    apkEstimateCount: Int
+) {
+    val message = when {
+        installedSizeCount > 0 && apkEstimateCount > 0 ->
+            "$installedSizeCount apps use device totals, $apkEstimateCount use APK estimates."
+        installedSizeCount > 0 ->
+            "All oversized results use device total storage."
+        apkEstimateCount > 0 ->
+            "Oversized results are currently based on APK estimates."
+        else ->
+            "No oversized apps in this scan."
+    }
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFFFF1D9)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF7A5726)
+        )
     }
 }
 
@@ -745,9 +859,10 @@ private fun ActionAppCard(
                 RiskBadge(level = app.riskLevel)
                 if (section == HomeSection.Oversized) {
                     PermissionPill(label = readableSize(app.apkSizeBytes))
+                    PermissionPill(label = oversizedSourceLabel(app))
                 }
-                if (section == HomeSection.Unused && app.lastUsedAt != null) {
-                    PermissionPill(label = "${daysSince(app.lastUsedAt)} 天沒開")
+                if (section == HomeSection.Unused) {
+                    PermissionPill(label = unusedUsageBadge(app.lastUsedAt))
                 }
             }
             Text(
@@ -2197,9 +2312,16 @@ private fun openAppInfo(context: Context, packageName: String) {
     context.startActivity(intent)
 }
 
+private fun isPackageInstalled(context: Context, packageName: String): Boolean {
+    return runCatching {
+        context.packageManager.getPackageInfo(packageName, 0)
+    }.isSuccess
+}
+
 private fun uninstallIntent(packageName: String): Intent {
-    return Intent(Intent.ACTION_DELETE).apply {
+    return Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
         data = Uri.parse("package:$packageName")
+        putExtra(Intent.EXTRA_RETURN_RESULT, true)
     }
 }
 
@@ -2291,6 +2413,19 @@ private fun formatLastUsed(lastUsedAt: Long?): String {
 
 private fun daysSince(lastUsedAt: Long): Long =
     ((System.currentTimeMillis() - lastUsedAt) / (1000L * 60 * 60 * 24)).coerceAtLeast(0)
+
+private fun unusedUsageBadge(lastUsedAt: Long?): String =
+    if (lastUsedAt == null) {
+        "120+ days idle"
+    } else {
+        "${daysSince(lastUsedAt)} days idle"
+    }
+
+private fun oversizedSourceLabel(app: AppScanResult): String =
+    when (app.sizeSource) {
+        AppSizeSource.InstalledSize -> "device total"
+        AppSizeSource.ApkEstimate -> "apk estimate"
+    }
 
 private enum class HomeSection(val title: String) {
     Noteworthy("值得注意的"),

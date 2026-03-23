@@ -6,6 +6,25 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
+val appVersionCode = providers.gradleProperty("appVersionCode")
+    .orElse("1")
+    .map(String::toInt)
+val appVersionName = providers.gradleProperty("appVersionName")
+    .orElse("1.0")
+
+val releaseStoreFile = providers.gradleProperty("releaseStoreFile")
+    .orElse(providers.environmentVariable("RELEASE_STORE_FILE"))
+    .orNull
+val releaseStorePassword = providers.gradleProperty("releaseStorePassword")
+    .orElse(providers.environmentVariable("RELEASE_STORE_PASSWORD"))
+    .orNull
+val releaseKeyAlias = providers.gradleProperty("releaseKeyAlias")
+    .orElse(providers.environmentVariable("RELEASE_KEY_ALIAS"))
+    .orNull
+val releaseKeyPassword = providers.gradleProperty("releaseKeyPassword")
+    .orElse(providers.environmentVariable("RELEASE_KEY_PASSWORD"))
+    .orNull
+
 android {
     namespace = "com.secureguard.app"
     compileSdk = 35
@@ -14,8 +33,8 @@ android {
         applicationId = "com.secureguard.app"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode.get()
+        versionName = appVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -26,6 +45,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (
+                !releaseStoreFile.isNullOrBlank() &&
+                !releaseStorePassword.isNullOrBlank() &&
+                !releaseKeyAlias.isNullOrBlank() &&
+                !releaseKeyPassword.isNullOrBlank()
+            ) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -50,6 +77,22 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    signingConfigs {
+        if (
+            !releaseStoreFile.isNullOrBlank() &&
+            !releaseStorePassword.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() &&
+            !releaseKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 }

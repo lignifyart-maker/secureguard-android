@@ -1,7 +1,7 @@
 package com.secureguard.app.domain.repository
 
-import com.secureguard.app.domain.model.AppScanResult
+import com.secureguard.app.domain.model.AppScanSnapshot
 
 interface AppScannerRepository {
-    suspend fun scanInstalledApps(): List<AppScanResult>
+    suspend fun scanInstalledApps(): AppScanSnapshot
 }
