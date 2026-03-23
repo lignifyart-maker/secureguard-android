@@ -42,24 +42,6 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            if (
-                !releaseStoreFile.isNullOrBlank() &&
-                !releaseStorePassword.isNullOrBlank() &&
-                !releaseKeyAlias.isNullOrBlank() &&
-                !releaseKeyPassword.isNullOrBlank()
-            ) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -88,11 +70,29 @@ android {
             !releaseKeyPassword.isNullOrBlank()
         ) {
             create("release") {
-                storeFile = file(releaseStoreFile!!)
+                storeFile = file(releaseStoreFile)
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
             }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            if (
+                !releaseStoreFile.isNullOrBlank() &&
+                !releaseStorePassword.isNullOrBlank() &&
+                !releaseKeyAlias.isNullOrBlank() &&
+                !releaseKeyPassword.isNullOrBlank()
+            ) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
