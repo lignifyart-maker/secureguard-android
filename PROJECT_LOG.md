@@ -39,6 +39,12 @@
   - tap to check
   - if newer, show a simple download dialog and open the release page
 - Added a GitHub Release workflow so APK distribution can move from manual file passing to release links.
+- Added a stable release-signing pipeline backed by a dedicated release keystore in GitHub Actions.
+- Switched release publishing from debug APK output to signed `release` APK output.
+- Added tag-driven `versionName` and `versionCode` generation in the release workflow so published builds can upgrade cleanly over older release builds.
+- Improved the unused-app section so apps with no recent usage history can still be surfaced when Usage Access is available.
+- Improved the oversized-app section so it prefers actual installed size from Android storage stats and falls back to APK-size estimates when needed.
+- Added clearer in-app status feedback after returning from the uninstall flow.
 
 ## Core Runtime Status
 
@@ -53,10 +59,15 @@
 - Pushed workflow fix in commit `cada769`.
 - `v1.0.1` release completed successfully.
 - `v1.0.2` release completed successfully after the home-list and uninstall-flow fixes.
+- `v1.0.3` release failed because the release signing config was referenced before creation.
+- Fixed release signing config ordering in commit `734fba7`.
+- `v1.0.4` release completed successfully and now publishes a signed `app-release.apk`.
 - Releases page:
   - `https://github.com/lignifyart-maker/secureguard-android/releases`
 - Latest release page:
-  - `https://github.com/lignifyart-maker/secureguard-android/releases/tag/v1.0.2`
+  - `https://github.com/lignifyart-maker/secureguard-android/releases/tag/v1.0.4`
+- Latest release APK:
+  - `https://github.com/lignifyart-maker/secureguard-android/releases/download/v1.0.4/app-release.apk`
 - The repository visibility was later changed from private to public so release links and update checks are no longer blocked by repo access.
 
 ## Important Commits
@@ -67,6 +78,8 @@
 - `cada769` Fix GitHub release workflow build step
 - `06dcb6b` Update project log for cleanup-focused direction
 - `3eabb25` Polish home list limits and uninstall flow
+- `4f3fc64` Improve cleanup flow and signed release pipeline
+- `734fba7` Fix release signing config creation order
 
 ## Current State
 
@@ -76,19 +89,21 @@
 - The home summary now shows the app version.
 - The `值得注意的` section is capped to 10 items by default, with a `顯示更多` expansion path.
 - The uninstall path now opens Android's uninstall flow correctly instead of stalling.
-- The oversized-app list is a first-pass approximation based on APK size, not full storage usage yet.
-- The unused-app list depends on Usage Access and should be considered functional but not fully polished.
+- The uninstall path now shows a clearer refresh status message after returning to the app.
+- The oversized-app list now prefers actual installed size and marks whether a result is based on device totals or APK estimates.
+- The unused-app list depends on Usage Access, but now handles missing recent history more gracefully instead of collapsing to zero too often.
 - The update-check flow is implemented and the public GitHub release pipeline is now working end to end.
-- Installing a newer APK over an older local build may still fail because releases are currently debug-signed, and debug signatures differ between local builds and GitHub Actions builds.
+- `v1.0.4` is now published as a signed `release` APK from GitHub Actions.
+- Installing a signed release build over an older debug-installed local build may still fail because Android does not allow upgrading across different signing keys.
 
 ## Next Recommended Steps
 
-1. Switch release distribution from debug signing to a stable release keystore so installed builds can upgrade in place.
+1. Update the in-app update flow so it downloads or installs the signed release APK directly instead of only opening the release page.
 2. Polish the three-section home flow:
    - tighten empty states
    - smooth wording
    - improve section summary copy
 3. Make the `很多天沒用的` section clearer when Usage Access is missing versus when the result is truly zero.
-4. Improve oversized-app accuracy by moving beyond APK-only size if needed.
+4. Improve oversized-app accuracy further if needed, especially on devices where storage stats fall back to APK-size estimates.
 5. Decide whether `Protection mode` should stay as an advanced page, hidden tool, or be removed from the main experience entirely.
-6. Add small success feedback after uninstall return so users know the list was refreshed on purpose.
+6. Decide whether to document a local signed-release build path in addition to the GitHub Actions release path.
